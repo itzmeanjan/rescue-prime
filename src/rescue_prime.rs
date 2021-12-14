@@ -43,3 +43,11 @@ fn reduce_sum_vec4(a: Simd<u64, 4>) -> u64 {
   let a1 = reduce_sum_vec2(simd_swizzle!(a, [2, 3]));
   reduce_sum_vec2(Simd::from_array([a0, a1]))
 }
+
+#[inline]
+fn reduce_sum(a: Simd<u64, 16>) -> u64 {
+  let a0 = reduce_sum_vec4(simd_swizzle!(a, [0, 1, 2, 3]));
+  let a1 = reduce_sum_vec4(simd_swizzle!(a, [4, 5, 6, 7]));
+  let a2 = reduce_sum_vec4(simd_swizzle!(a, [8, 9, 10, 11]));
+  reduce_sum_vec4(Simd::from_array([a0, a1, a2, 0]))
+}
