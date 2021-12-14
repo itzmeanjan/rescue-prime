@@ -2,7 +2,7 @@ use std::convert::TryInto;
 use std::simd::Simd;
 
 pub fn prepare_mds() -> [Simd<u64, 16>; 12] {
-  let mds: Vec<Simd<u64, 16>> = Vec::with_capacity(12);
+  let mut mds: Vec<Simd<u64, 16>> = Vec::with_capacity(12);
   for i in 0..12 {
     let m0: [u64; 16] = MDS[i * 16..(i + 1) * 16].try_into().unwrap();
     let m1 = Simd::from_array(m0);
@@ -12,7 +12,7 @@ pub fn prepare_mds() -> [Simd<u64, 16>; 12] {
 }
 
 pub fn prepare_ark1() -> [Simd<u64, 16>; 7] {
-  let ark1: Vec<Simd<u64, 16>> = Vec::with_capacity(7);
+  let mut ark1: Vec<Simd<u64, 16>> = Vec::with_capacity(7);
   for i in 0..7 {
     let m0: [u64; 16] = ARK1[i * 16..(i + 1) * 16].try_into().unwrap();
     let m1 = Simd::from_array(m0);
@@ -22,7 +22,7 @@ pub fn prepare_ark1() -> [Simd<u64, 16>; 7] {
 }
 
 pub fn prepare_ark2() -> [Simd<u64, 16>; 7] {
-  let ark2: Vec<Simd<u64, 16>> = Vec::with_capacity(7);
+  let mut ark2: Vec<Simd<u64, 16>> = Vec::with_capacity(7);
   for i in 0..7 {
     let m0: [u64; 16] = ARK2[i * 16..(i + 1) * 16].try_into().unwrap();
     let m1 = Simd::from_array(m0);
