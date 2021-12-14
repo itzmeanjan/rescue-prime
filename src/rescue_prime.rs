@@ -1,4 +1,4 @@
-use super::ff::{vec_add_ff_p64, vec_mul_ff_p64, MOD, UINT_MAX, ULONG_MAX};
+use super::ff::{to_canonical, vec_add_ff_p64, vec_mul_ff_p64, MOD, UINT_MAX, ULONG_MAX};
 use std::simd::{simd_swizzle, Simd, Which::*};
 
 const ZEROS_1: Simd<u64, 1> = Simd::from_array([0u64; 1]);
@@ -417,6 +417,49 @@ mod test {
       0,
     ];
 
-    assert_eq!(apply_sbox(state).to_array(), exp_state);
+    assert_eq!(to_canonical(apply_sbox(state)).to_array(), exp_state);
+  }
+
+  #[test]
+  fn test_apply_inv_sbox() {
+    let state: Simd<u64, 16> = Simd::from_array([
+      1 << 10,
+      1 << 11,
+      1 << 12,
+      1 << 13,
+      1 << 20,
+      1 << 21,
+      1 << 22,
+      1 << 23,
+      1 << 60,
+      1 << 61,
+      1 << 62,
+      1 << 63,
+      0,
+      0,
+      0,
+      0,
+    ]);
+
+    let exp_state: [u64; 16] = [
+      18446743794536677441,
+      536870912,
+      4503599626321920,
+      18446735273321562113,
+      18446726477228539905,
+      8,
+      288230376151711744,
+      18446744069414453249,
+      68719476736,
+      576460752169205760,
+      18445618169507741697,
+      512,
+      0,
+      0,
+      0,
+      0,
+    ];
+
+    assert_eq!(to_canonical(apply_inv_sbox(state)).to_array(), exp_state);
   }
 }
