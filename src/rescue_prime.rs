@@ -1,4 +1,4 @@
-use super::ff::{to_canonical, vec_add_ff_p64, vec_mul_ff_p64, MOD, UINT_MAX, ULONG_MAX};
+use super::ff::{vec_add_ff_p64, vec_mul_ff_p64, MOD, UINT_MAX, ULONG_MAX};
 use std::simd::{simd_swizzle, Simd, Which::*};
 
 const ZEROS_1: Simd<u64, 1> = Simd::from_array([0u64; 1]);
@@ -159,7 +159,7 @@ fn hash_elements(
       5 => simd_swizzle!(state, [5]),
       6 => simd_swizzle!(state, [6]),
       7 => simd_swizzle!(state, [7]),
-      _ => simd_swizzle!(state, [16]),
+      _ => simd_swizzle!(state, [0]),
     };
     let c = simd_swizzle!(a, b, [First(0), Second(0)]);
     let d = Simd::<u64, 16>::splat(reduce_sum_vec2(c));
@@ -375,7 +375,10 @@ fn hash_elements(
 }
 
 mod test {
+  extern crate test;
+  use super::super::ff::to_canonical;
   use super::*;
+  use test::Bencher;
 
   #[test]
   fn test_apply_sbox() {
@@ -519,5 +522,15 @@ mod test {
     ];
 
     assert_eq!(to_canonical(apply_mds(state, mds)).to_array(), exp_state);
+  }
+
+  #[bench]
+  fn bench_hash_elements(b: &mut Bencher) {
+    let input: [u64; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
+    let mds = crate::rescue_constants::prepare_mds();
+    let ark1 = crate::rescue_constants::prepare_ark1();
+    let ark2 = crate::rescue_constants::prepare_ark2();
+
+    b.iter(|| hash_elements(&input, mds, ark1, ark2));
   }
 }
