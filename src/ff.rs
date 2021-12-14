@@ -1,8 +1,8 @@
 use std::simd::Simd;
 
-const ULONG_MAX: u64 = 0xffffffffffffffff;
-const UINT_MAX: u64 = 0xffffffff;
-const MOD: u64 = 0xffffffff00000001;
+pub const ULONG_MAX: u64 = 0xffffffffffffffff;
+pub const UINT_MAX: u64 = 0xffffffff;
+pub const MOD: u64 = 0xffffffff00000001;
 const ZEROS: Simd<u64, 16> = Simd::from_array([0u64; 16]);
 const ONES: Simd<u64, 16> = Simd::from_array([1u64; 16]);
 
@@ -32,14 +32,14 @@ pub fn vec_mul_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
 
   let tmp0 = ab - d;
   let under0 = ab.lanes_lt(d);
-  let tmp1 = under0.select(ONES, ZEROS) * 0xffffffff;
+  let tmp1 = under0.select(ONES, ZEROS) * UINT_MAX;
   let tmp2 = tmp0 - tmp1;
 
   let tmp3 = (c << 32) - c;
 
   let tmp4 = tmp2 + tmp3;
   let over0 = tmp2.lanes_gt(ULONG_MAX - tmp3);
-  let tmp5 = over0.select(ONES, ZEROS) * 0xffffffff;
+  let tmp5 = over0.select(ONES, ZEROS) * UINT_MAX;
 
   tmp4 + tmp5
 }
@@ -50,11 +50,11 @@ pub fn vec_add_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
 
   let tmp0 = a + b_ok;
   let over0 = a.lanes_gt(ULONG_MAX - b_ok);
-  let tmp1 = over0.select(ONES, ZEROS) * 0xffffffff;
+  let tmp1 = over0.select(ONES, ZEROS) * UINT_MAX;
 
   let tmp2 = tmp0 + tmp1;
   let over1 = tmp0.lanes_gt(ULONG_MAX - tmp1);
-  let tmp3 = over1.select(ONES, ZEROS) * 0xffffffff;
+  let tmp3 = over1.select(ONES, ZEROS) * UINT_MAX;
 
   tmp2 + tmp3
 }
