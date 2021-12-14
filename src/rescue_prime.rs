@@ -374,6 +374,24 @@ fn hash_elements(
   simd_swizzle!(state, [0, 1, 2, 3]).to_array()
 }
 
+fn merge(
+  input: [u64; 8],
+  mds: [Simd<u64, 16>; 12],
+  ark1: [Simd<u64, 16>; 7],
+  ark2: [Simd<u64, 16>; 7],
+) -> [u64; 4] {
+  let mut state = {
+    let mut arr = [0; 16];
+    arr[..RATE_WIDTH].copy_from_slice(&input[..]);
+    arr[STATE_WIDTH - 1] = RATE_WIDTH as u64;
+
+    Simd::from_array(arr)
+  };
+
+  state = apply_rescue_permutation(state, mds, ark1, ark2);
+  simd_swizzle!(state, [0, 1, 2, 3]).to_array()
+}
+
 mod test {
   extern crate test;
   use super::super::ff::to_canonical;
