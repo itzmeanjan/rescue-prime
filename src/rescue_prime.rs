@@ -79,3 +79,23 @@ fn exp_acc(m: usize, base: Simd<u64, 16>, tail: Simd<u64, 16>) -> Simd<u64, 16> 
 
   vec_mul_ff_p64(res, tail)
 }
+
+#[inline]
+fn apply_inv_sbox(state: Simd<u64, 16>) -> Simd<u64, 16> {
+  let t1 = vec_mul_ff_p64(state, state);
+  let t2 = vec_mul_ff_p64(t1, t1);
+
+  let t3 = exp_acc(3, t2, t2);
+  let t4 = exp_acc(6, t3, t3);
+  let t4 = exp_acc(12, t4, t4);
+
+  let t5 = exp_acc(6, t4, t3);
+  let t6 = exp_acc(31, t5, t5);
+
+  let a = vec_mul_ff_p64(vec_mul_ff_p64(t6, t6), t5);
+  let a = vec_mul_ff_p64(a, a);
+  let a = vec_mul_ff_p64(a, a);
+  let b = vec_mul_ff_p64(vec_mul_ff_p64(t1, t2), state);
+
+  vec_mul_ff_p64(a, b)
+}
