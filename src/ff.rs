@@ -45,7 +45,7 @@ pub fn vec_mul_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
 }
 
 #[inline]
-fn vec_add_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
+pub fn vec_add_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
   let b_ok = to_canonical(b);
 
   let tmp0 = a + b_ok;
@@ -60,7 +60,7 @@ fn vec_add_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
 }
 
 #[inline]
-fn to_canonical(a: Simd<u64, 16>) -> Simd<u64, 16> {
+pub fn to_canonical(a: Simd<u64, 16>) -> Simd<u64, 16> {
   // Following two lines are equivalent to `a % MOD`
   //
   // Just to avoid expensive modulo reduction, I use following
