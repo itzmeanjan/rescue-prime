@@ -52,3 +52,61 @@ fn to_canonical(a: Simd<u64, 16>) -> Simd<u64, 16> {
   let over = a.lanes_ge(Simd::from_array([MOD; 16]));
   a - over.select(ONES, ZEROS) * MOD
 }
+
+mod test {
+  extern crate rand;
+  use super::*;
+  use std::convert::TryInto;
+
+  fn random_vector() -> Simd<u64, 16> {
+    let mut a = Vec::with_capacity(16);
+    for _ in 0..16 {
+      a.push(rand::random::<u64>() % MOD);
+    }
+
+    let arr: [u64; 16] = a.try_into().unwrap();
+    Simd::from_array(arr)
+  }
+
+  #[test]
+  fn test_ff_mul_0() {
+    let a = random_vector();
+    assert_eq!(
+      to_canonical(vec_mul_ff_p64(a, ZEROS)).to_array(),
+      [0u64; 16]
+    );
+  }
+
+  #[test]
+  fn test_ff_mul_1() {
+    let a = random_vector();
+    assert_eq!(
+      to_canonical(vec_mul_ff_p64(a, ONES)).to_array(),
+      a.to_array()
+    );
+  }
+
+  #[test]
+  fn test_ff_mul_2() {
+    let a = Simd::from_array([3u64; 16]);
+    let b = Simd::from_array([5u64; 16]);
+    assert_eq!(to_canonical(vec_mul_ff_p64(a, b)).to_array(), [15u64; 16]);
+  }
+
+  #[test]
+  fn test_ff_mul_3() {
+    let a = Simd::from_array([MOD - 1; 16]);
+    let b = Simd::from_array([2u64; 16]);
+    let c = Simd::from_array([4u64; 16]);
+    assert_eq!(to_canonical(vec_mul_ff_p64(a, a)).to_array(), [1u64; 16]);
+    assert_eq!(to_canonical(vec_mul_ff_p64(a, b)).to_array(), [MOD - 2; 16]);
+    assert_eq!(to_canonical(vec_mul_ff_p64(a, c)).to_array(), [MOD - 4; 16]);
+  }
+
+  #[test]
+  fn test_ff_mul_4() {
+    let a = Simd::from_array([(MOD + 1) / 2; 16]);
+    let b = Simd::from_array([2u64; 16]);
+    assert_eq!(to_canonical(vec_mul_ff_p64(a, b)).to_array(), [1u64; 16]);
+  }
+}
