@@ -68,3 +68,14 @@ fn apply_mds(state: Simd<u64, 16>, mds: [Simd<u64, 16>; 12]) -> Simd<u64, 16> {
   let s11 = reduce_sum(vec_mul_ff_p64(state, mds[11]));
   Simd::from_array([s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, 0, 0, 0, 0])
 }
+
+#[inline]
+fn exp_acc(m: usize, base: Simd<u64, 16>, tail: Simd<u64, 16>) -> Simd<u64, 16> {
+  let mut res = base;
+
+  for _ in 0..m {
+    res = vec_mul_ff_p64(res, res);
+  }
+
+  vec_mul_ff_p64(res, tail)
+}
