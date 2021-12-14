@@ -134,7 +134,7 @@ fn apply_rescue_permutation(
   state
 }
 
-fn hash_elements(
+pub fn hash_elements(
   input: &[u64],
   mds: [Simd<u64, 16>; 12],
   ark1: [Simd<u64, 16>; 7],
@@ -374,7 +374,7 @@ fn hash_elements(
   simd_swizzle!(state, [0, 1, 2, 3]).to_array()
 }
 
-fn merge(
+pub fn merge(
   input: [u64; 8],
   mds: [Simd<u64, 16>; 12],
   ark1: [Simd<u64, 16>; 7],
