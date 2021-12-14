@@ -45,6 +45,21 @@ fn vec_mul_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
 }
 
 #[inline]
+fn vec_add_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
+  let b_ok = to_canonical(b);
+
+  let tmp0 = a + b_ok;
+  let over0 = a.lanes_gt(ULONG_MAX - b_ok);
+  let tmp1 = over0.select(ONES, ZEROS) * 0xffffffff;
+
+  let tmp2 = tmp0 + tmp1;
+  let over1 = tmp0.lanes_gt(ULONG_MAX - tmp1);
+  let tmp3 = over1.select(ONES, ZEROS) * 0xffffffff;
+
+  tmp2 + tmp3
+}
+
+#[inline]
 fn to_canonical(a: Simd<u64, 16>) -> Simd<u64, 16> {
   // Following two lines are equivalent to `a % MOD`
   //
