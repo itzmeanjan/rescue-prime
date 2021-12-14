@@ -462,4 +462,36 @@ mod test {
 
     assert_eq!(to_canonical(apply_inv_sbox(state)).to_array(), exp_state);
   }
+
+  #[test]
+  fn test_apply_rescue_permutation() {
+    let state: Simd<u64, 16> = Simd::from_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0, 0, 0]);
+    let mds = crate::rescue_constants::prepare_mds();
+    let ark1 = crate::rescue_constants::prepare_ark1();
+    let ark2 = crate::rescue_constants::prepare_ark2();
+
+    let exp_state: [u64; 16] = [
+      10809974140050983728,
+      6938491977181280539,
+      8834525837561071698,
+      6854417192438540779,
+      4476630872663101667,
+      6292749486700362097,
+      18386622366690620454,
+      10614098972800193173,
+      7543273285584849722,
+      9490898458612615694,
+      9030271581669113292,
+      10101107035874348250,
+      0,
+      0,
+      0,
+      0,
+    ];
+
+    assert_eq!(
+      to_canonical(apply_rescue_permutation(state, mds, ark1, ark2)).to_array(),
+      exp_state
+    );
+  }
 }
