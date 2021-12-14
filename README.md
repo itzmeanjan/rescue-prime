@@ -66,3 +66,6 @@ Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz | 58,968 ns | 58,470 ns
 Intel(R) Core(TM) i5-8279U CPU @ 2.40GHz | 36,409 ns | 36,602 ns
 Intel(R) Xeon(R) Platinum 8275CL CPU @ 3.00GHz | 38,114 ns | 37,963 ns
 Cortex-A57 | 214,118 ns | 213,401 ns
+Intel(R) Core(TM) i3-5005U CPU @ 2.00GHz | 112,862 ns | 112,666 ns
+Intel(R) Xeon(R) Platinum 8252C CPU @ 3.80GHz | 30,480 ns | 30,406 ns
+AMD EPYC 7R32 | 43,631 ns | 43,476 ns
