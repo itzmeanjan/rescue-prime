@@ -1,3 +1,36 @@
+use std::convert::TryInto;
+use std::simd::Simd;
+
+pub fn prepare_mds() -> [Simd<u64, 16>; 12] {
+  let mds: Vec<Simd<u64, 16>> = Vec::with_capacity(12);
+  for i in 0..12 {
+    let m0: [u64; 16] = MDS[i * 16..(i + 1) * 16].try_into().unwrap();
+    let m1 = Simd::from_array(m0);
+    mds.push(m1);
+  }
+  mds.try_into().unwrap()
+}
+
+pub fn prepare_ark1() -> [Simd<u64, 16>; 7] {
+  let ark1: Vec<Simd<u64, 16>> = Vec::with_capacity(7);
+  for i in 0..7 {
+    let m0: [u64; 16] = ARK1[i * 16..(i + 1) * 16].try_into().unwrap();
+    let m1 = Simd::from_array(m0);
+    ark1.push(m1);
+  }
+  ark1.try_into().unwrap()
+}
+
+pub fn prepare_ark2() -> [Simd<u64, 16>; 7] {
+  let ark2: Vec<Simd<u64, 16>> = Vec::with_capacity(7);
+  for i in 0..7 {
+    let m0: [u64; 16] = ARK2[i * 16..(i + 1) * 16].try_into().unwrap();
+    let m1 = Simd::from_array(m0);
+    ark2.push(m1);
+  }
+  ark2.try_into().unwrap()
+}
+
 pub const MDS: [u64; 192] = [
   2108866337646019936,
   11223275256334781131,
