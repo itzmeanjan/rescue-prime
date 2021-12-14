@@ -573,4 +573,14 @@ mod test {
 
     b.iter(|| hash_elements(&input, mds, ark1, ark2));
   }
+
+  #[bench]
+  fn bench_merge(b: &mut Bencher) {
+    let input: [u64; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
+    let mds = crate::rescue_constants::prepare_mds();
+    let ark1 = crate::rescue_constants::prepare_ark1();
+    let ark2 = crate::rescue_constants::prepare_ark2();
+
+    b.iter(|| merge(input, mds, ark1, ark2));
+  }
 }
