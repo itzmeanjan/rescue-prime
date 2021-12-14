@@ -99,3 +99,21 @@ fn apply_inv_sbox(state: Simd<u64, 16>) -> Simd<u64, 16> {
 
   vec_mul_ff_p64(a, b)
 }
+
+#[inline]
+fn apply_permutation_round(
+  mut state: Simd<u64, 16>,
+  mds: [Simd<u64, 16>; 12],
+  ark1: Simd<u64, 16>,
+  ark2: Simd<u64, 16>,
+) -> Simd<u64, 16> {
+  state = apply_sbox(state);
+  state = apply_mds(state, mds);
+  state = apply_constants(state, ark1);
+
+  state = apply_inv_sbox(state);
+  state = apply_mds(state, mds);
+  state = apply_constants(state, ark2);
+
+  state
+}
