@@ -141,7 +141,7 @@ fn hash_elements(
   ark2: [Simd<u64, 16>; 7],
 ) -> [u64; 4] {
   let mut state = {
-    let arr = [0; 16];
+    let mut arr = [0; 16];
     arr[STATE_WIDTH - 1] = input.len() as u64 % MOD;
 
     Simd::from_array(arr)
@@ -159,6 +159,7 @@ fn hash_elements(
       5 => simd_swizzle!(state, [5]),
       6 => simd_swizzle!(state, [6]),
       7 => simd_swizzle!(state, [7]),
+      _ => simd_swizzle!(state, [16]),
     };
     let c = simd_swizzle!(a, b, [First(0), Second(0)]);
     let d = Simd::<u64, 16>::splat(reduce_sum_vec2(c));
@@ -356,6 +357,7 @@ fn hash_elements(
           ]
         )
       }
+      _ => state,
     };
 
     i += 1;
@@ -369,5 +371,52 @@ fn hash_elements(
     state = apply_rescue_permutation(state, mds, ark1, ark2);
   }
 
-  simd_swizzle!(state, [0, 1, 2, 3])
+  simd_swizzle!(state, [0, 1, 2, 3]).to_array()
+}
+
+mod test {
+  use super::*;
+
+  #[test]
+  fn test_apply_sbox() {
+    let state: Simd<u64, 16> = Simd::from_array([
+      1 << 10,
+      1 << 11,
+      1 << 12,
+      1 << 13,
+      1 << 20,
+      1 << 21,
+      1 << 22,
+      1 << 23,
+      1 << 60,
+      1 << 61,
+      1 << 62,
+      1 << 63,
+      0,
+      0,
+      0,
+      0,
+    ]);
+
+    let exp_state: [u64; 16] = [
+      274877906880,
+      35184372080640,
+      4503599626321920,
+      576460752169205760,
+      18446726477228539905,
+      18444492269600899073,
+      18158513693262872577,
+      18446744060824649731,
+      68719476736,
+      8796093022208,
+      1125899906842624,
+      144115188075855872,
+      0,
+      0,
+      0,
+      0,
+    ];
+
+    assert_eq!(apply_sbox(state).to_array(), exp_state);
+  }
 }
