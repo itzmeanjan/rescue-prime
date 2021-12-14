@@ -124,4 +124,37 @@ mod test {
     let b = Simd::from_array([2u64; 16]);
     assert_eq!(to_canonical(vec_mul_ff_p64(a, b)).to_array(), [1u64; 16]);
   }
+
+  #[test]
+  fn test_ff_add_0() {
+    let a = random_vector();
+    assert_eq!(
+      to_canonical(vec_add_ff_p64(a, ZEROS)).to_array(),
+      a.to_array()
+    );
+  }
+
+  #[test]
+  fn test_ff_add_1() {
+    let a = Simd::from_array([2u64; 16]);
+    let b = Simd::from_array([3u64; 16]);
+    assert_eq!(to_canonical(vec_add_ff_p64(a, b)).to_array(), [5u64; 16]);
+  }
+
+  #[test]
+  fn test_ff_add_2() {
+    let a = Simd::from_array([MOD - 1; 16]);
+    assert_eq!(to_canonical(vec_add_ff_p64(a, ONES)).to_array(), [0u64; 16]);
+    assert_eq!(
+      to_canonical(vec_add_ff_p64(a, Simd::from_array([2u64; 16]))).to_array(),
+      [1u64; 16]
+    );
+  }
+
+  #[test]
+  fn test_ff_add_3() {
+    let a = Simd::from_array([MOD - 1; 16]);
+    let b = Simd::from_array([0xffffffffu64; 16]);
+    assert_eq!(to_canonical(vec_add_ff_p64(a, b)).to_array(), [0xfffffffeu64; 16]);
+  }
 }
