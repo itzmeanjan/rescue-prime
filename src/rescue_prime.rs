@@ -51,3 +51,20 @@ fn reduce_sum(a: Simd<u64, 16>) -> u64 {
   let a2 = reduce_sum_vec4(simd_swizzle!(a, [8, 9, 10, 11]));
   reduce_sum_vec4(Simd::from_array([a0, a1, a2, 0]))
 }
+
+#[inline]
+fn apply_mds(state: Simd<u64, 16>, mds: [Simd<u64, 16>; 12]) -> Simd<u64, 16> {
+  let s0 = reduce_sum(vec_mul_ff_p64(state, mds[0]));
+  let s1 = reduce_sum(vec_mul_ff_p64(state, mds[1]));
+  let s2 = reduce_sum(vec_mul_ff_p64(state, mds[2]));
+  let s3 = reduce_sum(vec_mul_ff_p64(state, mds[3]));
+  let s4 = reduce_sum(vec_mul_ff_p64(state, mds[4]));
+  let s5 = reduce_sum(vec_mul_ff_p64(state, mds[5]));
+  let s6 = reduce_sum(vec_mul_ff_p64(state, mds[6]));
+  let s7 = reduce_sum(vec_mul_ff_p64(state, mds[7]));
+  let s8 = reduce_sum(vec_mul_ff_p64(state, mds[8]));
+  let s9 = reduce_sum(vec_mul_ff_p64(state, mds[9]));
+  let s10 = reduce_sum(vec_mul_ff_p64(state, mds[10]));
+  let s11 = reduce_sum(vec_mul_ff_p64(state, mds[11]));
+  Simd::from_array([s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, 0, 0, 0, 0])
+}
