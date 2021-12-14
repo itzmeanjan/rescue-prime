@@ -24,7 +24,7 @@ fn mul_hi(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
 }
 
 #[inline]
-fn vec_mul_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
+pub fn vec_mul_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
   let ab = a * b;
   let cd = mul_hi(a, b);
   let c = cd & UINT_MAX;
