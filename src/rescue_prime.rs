@@ -3,6 +3,7 @@ use std::simd::{simd_swizzle, Simd};
 
 const ZEROS_1: Simd<u64, 1> = Simd::from_array([0u64; 1]);
 const ONES_1: Simd<u64, 1> = Simd::from_array([1u64; 1]);
+const NUM_ROUNDS: usize = 7;
 
 #[inline]
 fn apply_sbox(state: Simd<u64, 16>) -> Simd<u64, 16> {
@@ -114,6 +115,19 @@ fn apply_permutation_round(
   state = apply_inv_sbox(state);
   state = apply_mds(state, mds);
   state = apply_constants(state, ark2);
+
+  state
+}
+
+fn apply_rescue_permutation(
+  mut state: Simd<u64, 16>,
+  mds: [Simd<u64, 16>; 12],
+  ark1: [Simd<u64, 16>; 7],
+  ark2: [Simd<u64, 16>; 7],
+) -> Simd<u64, 16> {
+  for i in 0..NUM_ROUNDS {
+    state = apply_permutation_round(state, mds, ark1[i], ark2[i]);
+  }
 
   state
 }
