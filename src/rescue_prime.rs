@@ -542,6 +542,28 @@ mod test {
     assert_eq!(to_canonical(apply_mds(state, mds)).to_array(), exp_state);
   }
 
+  #[test]
+  fn test_merge() {
+    let state: [u64; 8] = [
+      1 << 0,
+      1 << 1,
+      1 << 2,
+      1 << 3,
+      1 << 4,
+      1 << 5,
+      1 << 6,
+      1 << 7,
+    ];
+    let mds = crate::rescue_constants::prepare_mds();
+    let ark1 = crate::rescue_constants::prepare_ark1();
+    let ark2 = crate::rescue_constants::prepare_ark2();
+
+    assert_eq!(
+      hash_elements(&state, mds, ark1, ark2),
+      merge(state, mds, ark1, ark2)
+    );
+  }
+
   #[bench]
   fn bench_hash_elements(b: &mut Bencher) {
     let input: [u64; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
