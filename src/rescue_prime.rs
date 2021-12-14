@@ -1,9 +1,11 @@
 use super::ff::{vec_add_ff_p64, vec_mul_ff_p64, MOD, UINT_MAX, ULONG_MAX};
-use std::simd::{simd_swizzle, Simd};
+use std::simd::{simd_swizzle, Simd, Which::*};
 
 const ZEROS_1: Simd<u64, 1> = Simd::from_array([0u64; 1]);
 const ONES_1: Simd<u64, 1> = Simd::from_array([1u64; 1]);
 const NUM_ROUNDS: usize = 7;
+const RATE_WIDTH: usize = 8;
+const STATE_WIDTH: usize = 12;
 
 #[inline]
 fn apply_sbox(state: Simd<u64, 16>) -> Simd<u64, 16> {
@@ -130,4 +132,242 @@ fn apply_rescue_permutation(
   }
 
   state
+}
+
+fn hash_elements(
+  input: &[u64],
+  mds: [Simd<u64, 16>; 12],
+  ark1: [Simd<u64, 16>; 7],
+  ark2: [Simd<u64, 16>; 7],
+) -> [u64; 4] {
+  let mut state = {
+    let arr = [0; 16];
+    arr[STATE_WIDTH - 1] = input.len() as u64 % MOD;
+
+    Simd::from_array(arr)
+  };
+
+  let mut i = 0;
+  for &elm in input.iter() {
+    let a = Simd::<u64, 1>::splat(elm);
+    let b = match i {
+      0 => simd_swizzle!(state, [0]),
+      1 => simd_swizzle!(state, [1]),
+      2 => simd_swizzle!(state, [2]),
+      3 => simd_swizzle!(state, [3]),
+      4 => simd_swizzle!(state, [4]),
+      5 => simd_swizzle!(state, [5]),
+      6 => simd_swizzle!(state, [6]),
+      7 => simd_swizzle!(state, [7]),
+    };
+    let c = simd_swizzle!(a, b, [First(0), Second(0)]);
+    let d = Simd::<u64, 16>::splat(reduce_sum_vec2(c));
+
+    state = match i {
+      0 => {
+        simd_swizzle!(
+          state,
+          d,
+          [
+            Second(0),
+            First(1),
+            First(2),
+            First(3),
+            First(4),
+            First(5),
+            First(6),
+            First(7),
+            First(8),
+            First(9),
+            First(10),
+            First(11),
+            First(12),
+            First(13),
+            First(14),
+            First(15),
+          ]
+        )
+      }
+      1 => {
+        simd_swizzle!(
+          state,
+          d,
+          [
+            First(0),
+            Second(1),
+            First(2),
+            First(3),
+            First(4),
+            First(5),
+            First(6),
+            First(7),
+            First(8),
+            First(9),
+            First(10),
+            First(11),
+            First(12),
+            First(13),
+            First(14),
+            First(15),
+          ]
+        )
+      }
+      2 => {
+        simd_swizzle!(
+          state,
+          d,
+          [
+            First(0),
+            First(1),
+            Second(2),
+            First(3),
+            First(4),
+            First(5),
+            First(6),
+            First(7),
+            First(8),
+            First(9),
+            First(10),
+            First(11),
+            First(12),
+            First(13),
+            First(14),
+            First(15),
+          ]
+        )
+      }
+      3 => {
+        simd_swizzle!(
+          state,
+          d,
+          [
+            First(0),
+            First(1),
+            First(2),
+            Second(3),
+            First(4),
+            First(5),
+            First(6),
+            First(7),
+            First(8),
+            First(9),
+            First(10),
+            First(11),
+            First(12),
+            First(13),
+            First(14),
+            First(15),
+          ]
+        )
+      }
+      4 => {
+        simd_swizzle!(
+          state,
+          d,
+          [
+            First(0),
+            First(1),
+            First(2),
+            First(3),
+            Second(4),
+            First(5),
+            First(6),
+            First(7),
+            First(8),
+            First(9),
+            First(10),
+            First(11),
+            First(12),
+            First(13),
+            First(14),
+            First(15),
+          ]
+        )
+      }
+      5 => {
+        simd_swizzle!(
+          state,
+          d,
+          [
+            First(0),
+            First(1),
+            First(2),
+            First(3),
+            First(4),
+            Second(5),
+            First(6),
+            First(7),
+            First(8),
+            First(9),
+            First(10),
+            First(11),
+            First(12),
+            First(13),
+            First(14),
+            First(15),
+          ]
+        )
+      }
+      6 => {
+        simd_swizzle!(
+          state,
+          d,
+          [
+            First(0),
+            First(1),
+            First(2),
+            First(3),
+            First(4),
+            First(5),
+            Second(6),
+            First(7),
+            First(8),
+            First(9),
+            First(10),
+            First(11),
+            First(12),
+            First(13),
+            First(14),
+            First(15),
+          ]
+        )
+      }
+      7 => {
+        simd_swizzle!(
+          state,
+          d,
+          [
+            First(0),
+            First(1),
+            First(2),
+            First(3),
+            First(4),
+            First(5),
+            First(6),
+            Second(7),
+            First(8),
+            First(9),
+            First(10),
+            First(11),
+            First(12),
+            First(13),
+            First(14),
+            First(15),
+          ]
+        )
+      }
+    };
+
+    i += 1;
+    if i % RATE_WIDTH == 0 {
+      state = apply_rescue_permutation(state, mds, ark1, ark2);
+      i = 0;
+    }
+  }
+
+  if i > 0 {
+    state = apply_rescue_permutation(state, mds, ark1, ark2);
+  }
+
+  simd_swizzle!(state, [0, 1, 2, 3])
 }
