@@ -1,15 +1,16 @@
 use std::simd::Simd;
 
 const ULONG_MAX: u64 = 0xffffffffffffffff;
+const UINT_MAX: u64 = 0xffffffff;
 const MOD: u64 = 0xffffffff00000001;
 const ZEROS: Simd<u64, 16> = Simd::from_array([0u64; 16]);
 const ONES: Simd<u64, 16> = Simd::from_array([1u64; 16]);
 
 #[inline]
 fn mul_hi(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
-  let a_lo = a & 0x00000000ffffffff;
+  let a_lo = a & UINT_MAX;
   let a_hi = a >> 32;
-  let b_lo = b & 0x00000000ffffffff;
+  let b_lo = b & UINT_MAX;
   let b_hi = b >> 32;
 
   let a_x_b_hi = a_hi * b_hi;
@@ -17,8 +18,7 @@ fn mul_hi(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
   let b_x_a_mid = b_hi * a_lo;
   let a_x_b_lo = a_lo * b_lo;
 
-  let carry_bit =
-    ((a_x_b_mid & 0x00000000ffffffff) + (b_x_a_mid & 0x00000000ffffffff) + (a_x_b_lo >> 32)) >> 32;
+  let carry_bit = ((a_x_b_mid & UINT_MAX) + (b_x_a_mid & UINT_MAX) + (a_x_b_lo >> 32)) >> 32;
 
   a_x_b_hi + (a_x_b_mid >> 32) + (b_x_a_mid >> 32) + carry_bit
 }
@@ -27,7 +27,7 @@ fn mul_hi(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
 fn vec_mul_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
   let ab = a * b;
   let cd = mul_hi(a, b);
-  let c = cd & 0x00000000ffffffff;
+  let c = cd & UINT_MAX;
   let d = cd >> 32;
 
   let tmp0 = ab - d;
@@ -155,6 +155,9 @@ mod test {
   fn test_ff_add_3() {
     let a = Simd::from_array([MOD - 1; 16]);
     let b = Simd::from_array([0xffffffffu64; 16]);
-    assert_eq!(to_canonical(vec_add_ff_p64(a, b)).to_array(), [0xfffffffeu64; 16]);
+    assert_eq!(
+      to_canonical(vec_add_ff_p64(a, b)).to_array(),
+      [0xfffffffeu64; 16]
+    );
   }
 }
