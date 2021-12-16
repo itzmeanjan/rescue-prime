@@ -30,10 +30,16 @@ cargo test
 - Run benchmark on `hash_elements` and `merge` functions
 
 ```bash
-cargo bench
+RUSTFLAGS="-C target-cpu=native" cargo bench --lib -vv
+
+# consider enabling CPU specific vector instructions by passing
+#
+# RUSTFLAGS=`-C target-feature=+{avx,avx2,avx512vl,sse4.2,sse4.1,sse4a,neon}`
+#
+# check below benchmark result table for flags I've used
 ```
 
-- You'll find usage examples for both `hash_elements` and `merge` functions [here](https://github.com/itzmeanjan/simd-rescue-prime/blob/dcdebc35762a0dffcfce3278c2b8a8f892058809/src/main.rs#L14-L16)
+- Find usage example [here](https://github.com/itzmeanjan/simd-rescue-prime/blob/c27e75e938d0a103eb707dc74cc986ac7f6e7f83/src/bin/example.rs)
 
 ## Benchmark Results
 
@@ -60,12 +66,29 @@ In simple terms, `merge` function merges two Rescue Prime digests into single di
 
 > Following table denotes how long does it take to execute single round of `hash_elements`/ `merge` function invocation, on single core of specific CPU model.
 
-CPU | `hash_elements` | `merge`
---- | --- | ---
-Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz | 58,968 ns | 58,470 ns
-Intel(R) Core(TM) i5-8279U CPU @ 2.40GHz | 36,409 ns | 36,602 ns
-Intel(R) Xeon(R) Platinum 8275CL CPU @ 3.00GHz | 38,114 ns | 37,963 ns
-Cortex-A57 | 214,118 ns | 213,401 ns
-Intel(R) Core(TM) i3-5005U CPU @ 2.00GHz | 112,862 ns | 112,666 ns
-Intel(R) Xeon(R) Platinum 8252C CPU @ 3.80GHz | 30,480 ns | 30,406 ns
-AMD EPYC 7R32 | 43,631 ns | 43,476 ns
+FLAGS | CPU | `hash_elements` | `merge`
+--- | --- | --- | ---
+`RUSTFLAGS="-C target-feature=+avx2"` | Intel(R) Core(TM) i5-8279U CPU @ 2.40GHz | 10,967 ns/iter (+/- 1,330) | 11,064 ns/iter (+/- 915)
+`RUSTFLAGS="-C target-feature=+avx512vl"` | Intel(R) Xeon(R) Platinum 8275CL CPU @ 3.00GHz | 13,971 ns/iter (+/- 96) | 13,815 ns/iter (+/- 43)
+`RUSTFLAGS="-C target-feature=+avx2"` | Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz | 21,735 ns/iter (+/- 453) | 21,675 ns/iter (+/- 390)
+`RUSTFLAGS="-C target-feature=+avx2"` | Intel(R) Core(TM) i3-5005U CPU @ 2.00GHz | 30,392 ns/iter (+/- 726) | 30,175 ns/iter (+/- 11,915)
+`RUSTFLAGS="-C target-feature=+neon,+a57"` | Cortex-A57 | 216,010 ns/iter (+/- 23,089) | 218,299 ns/iter (+/- 38,991)
+_ | Intel(R) Xeon(R) Platinum 8252C CPU @ 3.80GHz | 30,480 ns | 30,406 ns
+_ | AMD EPYC 7R32 | 43,631 ns | 43,476 ns
+
+
+---
+
+> Above benchmarks are obtained by running `$FLAGS cargo bench --lib`, where FLAGS denote content of *FLAGS* column in above table.
+
+You may want to check your supported CPU features by running
+
+```bash
+lscpu # check *Flags* field
+```
+
+You should also check
+
+```bash
+rustc --print target-features | less
+```
