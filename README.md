@@ -39,7 +39,7 @@ RUSTFLAGS="-C target-cpu=native" cargo bench --lib -vv
 # check below benchmark result table for flags I've used
 ```
 
-- Find usage example [here](https://github.com/itzmeanjan/simd-rescue-prime/blob/c27e75e938d0a103eb707dc74cc986ac7f6e7f83/src/bin/example.rs)
+- Find usage example [here](https://github.com/itzmeanjan/simd-rescue-prime/tree/20bf40c/example)
 
 ## Benchmark Results
 
@@ -68,14 +68,13 @@ In simple terms, `merge` function merges two Rescue Prime digests into single di
 
 FLAGS | CPU | `hash_elements` | `merge`
 --- | --- | --- | ---
+`RUSTFLAGS="-C target-feature=+avx2"` | Intel(R) Xeon(R) Platinum 8252C CPU @ 3.80GHz | 9,952 ns/iter (+/- 317) | 9,904 ns/iter (+/- 199)
 `RUSTFLAGS="-C target-feature=+avx2"` | Intel(R) Core(TM) i5-8279U CPU @ 2.40GHz | 10,967 ns/iter (+/- 1,330) | 11,064 ns/iter (+/- 915)
+`RUSTFLAGS="-C target-feature=+avx2"` | AMD EPYC 7R32 | 13,333 ns/iter (+/- 331) | 13,315 ns/iter (+/- 319)
 `RUSTFLAGS="-C target-feature=+avx512vl"` | Intel(R) Xeon(R) Platinum 8275CL CPU @ 3.00GHz | 13,971 ns/iter (+/- 96) | 13,815 ns/iter (+/- 43)
 `RUSTFLAGS="-C target-feature=+avx2"` | Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz | 21,735 ns/iter (+/- 453) | 21,675 ns/iter (+/- 390)
 `RUSTFLAGS="-C target-feature=+avx2"` | Intel(R) Core(TM) i3-5005U CPU @ 2.00GHz | 30,392 ns/iter (+/- 726) | 30,175 ns/iter (+/- 11,915)
 `RUSTFLAGS="-C target-feature=+neon,+a57"` | Cortex-A57 | 216,010 ns/iter (+/- 23,089) | 218,299 ns/iter (+/- 38,991)
-_ | Intel(R) Xeon(R) Platinum 8252C CPU @ 3.80GHz | 30,480 ns | 30,406 ns
-_ | AMD EPYC 7R32 | 43,631 ns | 43,476 ns
-
 
 ---
 
@@ -92,3 +91,5 @@ You should also check
 ```bash
 rustc --print target-features | less
 ```
+
+> [This](https://github.com/rust-lang/portable-simd/blob/7d91357875da59d52284d506dcb457f7f88bf6bf/.github/workflows/ci.yml#L61-L260) CI build/ test script is pretty useful.
