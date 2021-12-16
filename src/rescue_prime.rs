@@ -392,6 +392,7 @@ pub fn merge(
   simd_swizzle!(state, [0, 1, 2, 3]).to_array()
 }
 
+#[cfg(test)]
 mod test {
   extern crate test;
   use super::super::ff::to_canonical;

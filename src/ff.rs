@@ -68,6 +68,7 @@ pub fn to_canonical(a: Simd<u64, 16>) -> Simd<u64, 16> {
   a - over.select(ONES, ZEROS) * MOD
 }
 
+#[cfg(test)]
 mod test {
   extern crate rand;
   use super::*;
