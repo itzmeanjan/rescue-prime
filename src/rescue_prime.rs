@@ -397,6 +397,7 @@ mod test {
   extern crate test;
   use super::super::ff::to_canonical;
   use super::*;
+  use test::black_box;
   use test::Bencher;
 
   #[test]
@@ -572,7 +573,14 @@ mod test {
     let ark1 = crate::rescue_constants::prepare_ark1();
     let ark2 = crate::rescue_constants::prepare_ark2();
 
-    b.iter(|| hash_elements(&input, mds, ark1, ark2));
+    b.iter(|| {
+      hash_elements(
+        black_box(&input),
+        black_box(mds),
+        black_box(ark1),
+        black_box(ark2),
+      )
+    });
   }
 
   #[bench]
@@ -582,6 +590,13 @@ mod test {
     let ark1 = crate::rescue_constants::prepare_ark1();
     let ark2 = crate::rescue_constants::prepare_ark2();
 
-    b.iter(|| merge(input, mds, ark1, ark2));
+    b.iter(|| {
+      merge(
+        black_box(input),
+        black_box(mds),
+        black_box(ark1),
+        black_box(ark2),
+      )
+    });
   }
 }
