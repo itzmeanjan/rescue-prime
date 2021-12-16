@@ -1,0 +1,7 @@
+[package]
+name = "simd-rescue-prime-example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+simd-rescue-prime = {git = "https://github.com/itzmeanjan/simd-rescue-prime.git", rev = "0cbb6e5"}
