@@ -172,6 +172,16 @@ mod test {
     Simd::from_array(arr)
   }
 
+  fn random_vector_() -> Simd<u64, 4> {
+    let mut a = Vec::with_capacity(4);
+    for _ in 0..4 {
+      a.push(rand::random::<u64>() % MOD);
+    }
+
+    let arr: [u64; 4] = a.try_into().unwrap();
+    Simd::from_array(arr)
+  }
+
   #[test]
   fn test_ff_mul_0() {
     let a = random_vector();
@@ -212,6 +222,66 @@ mod test {
     let a = Simd::from_array([(MOD + 1) / 2; 16]);
     let b = Simd::from_array([2u64; 16]);
     assert_eq!(to_canonical(vec_mul_ff_p64(a, b)).to_array(), [1u64; 16]);
+  }
+
+  #[test]
+  fn test_ff_mul_0_() {
+    let a = [random_vector_(), random_vector_(), random_vector_()];
+    let b = vec_mul_ff_p64_(a, [ZEROS_; 3]);
+
+    assert_eq!((b[0] % MOD).to_array(), [0u64; 4]);
+    assert_eq!((b[1] % MOD).to_array(), [0u64; 4]);
+    assert_eq!((b[2] % MOD).to_array(), [0u64; 4]);
+  }
+
+  #[test]
+  fn test_ff_mul_1_() {
+    let a = [random_vector_(), random_vector_(), random_vector_()];
+    let b = vec_mul_ff_p64_(a, [ONES_; 3]);
+
+    assert_eq!((b[0] % MOD).to_array(), a[0].to_array());
+    assert_eq!((b[1] % MOD).to_array(), a[1].to_array());
+    assert_eq!((b[2] % MOD).to_array(), a[2].to_array());
+  }
+
+  #[test]
+  fn test_ff_mul_2_() {
+    let a: Simd<u64, 4> = Simd::splat(3u64);
+    let b: Simd<u64, 4> = Simd::splat(5u64);
+    assert_eq!((vec_mul_ff_p64_internal(a, b) % MOD).to_array(), [15u64; 4]);
+  }
+
+  #[test]
+  fn test_ff_mul_3_() {
+    let a = [Simd::from_array([MOD - 1; 4]); 3];
+    let b = [Simd::from_array([2u64; 4]); 3];
+    let c = [Simd::from_array([4u64; 4]); 3];
+
+    let res_0 = vec_mul_ff_p64_(a, a);
+    assert_eq!((res_0[0] % MOD).to_array(), [1u64; 4]);
+    assert_eq!((res_0[1] % MOD).to_array(), [1u64; 4]);
+    assert_eq!((res_0[2] % MOD).to_array(), [1u64; 4]);
+
+    let res_1 = vec_mul_ff_p64_(a, b);
+    assert_eq!((res_1[0] % MOD).to_array(), [MOD - 2; 4]);
+    assert_eq!((res_1[1] % MOD).to_array(), [MOD - 2; 4]);
+    assert_eq!((res_1[2] % MOD).to_array(), [MOD - 2; 4]);
+
+    let res_2 = vec_mul_ff_p64_(a, c);
+    assert_eq!((res_2[0] % MOD).to_array(), [MOD - 4; 4]);
+    assert_eq!((res_2[1] % MOD).to_array(), [MOD - 4; 4]);
+    assert_eq!((res_2[2] % MOD).to_array(), [MOD - 4; 4]);
+  }
+
+  #[test]
+  fn test_ff_mul_4_() {
+    let a = [Simd::from_array([(MOD + 1) / 2; 4]); 3];
+    let b = [Simd::from_array([2u64; 4]); 3];
+
+    let res = vec_mul_ff_p64_(a, b);
+    assert_eq!((res[0] % MOD).to_array(), [1u64; 4]);
+    assert_eq!((res[1] % MOD).to_array(), [1u64; 4]);
+    assert_eq!((res[2] % MOD).to_array(), [1u64; 4]);
   }
 
   #[test]
