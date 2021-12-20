@@ -3,8 +3,11 @@ use std::simd::Simd;
 pub const ULONG_MAX: u64 = 0xffffffffffffffff;
 pub const UINT_MAX: u64 = 0xffffffff;
 pub const MOD: u64 = 0xffffffff00000001;
-const ZEROS: Simd<u64, 16> = Simd::from_array([0u64; 16]);
-const ONES: Simd<u64, 16> = Simd::from_array([1u64; 16]);
+const ZEROS: Simd<u64, 16> = Simd::splat(0u64);
+const ONES: Simd<u64, 16> = Simd::splat(1u64);
+
+const ZEROS_: Simd<u64, 4> = Simd::splat(0u64);
+const ONES_: Simd<u64, 4> = Simd::splat(1u64);
 
 #[inline]
 fn mul_hi(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
@@ -21,6 +24,32 @@ fn mul_hi(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
   let carry_bit = ((a_x_b_mid & UINT_MAX) + (b_x_a_mid & UINT_MAX) + (a_x_b_lo >> 32)) >> 32;
 
   a_x_b_hi + (a_x_b_mid >> 32) + (b_x_a_mid >> 32) + carry_bit
+}
+
+#[inline]
+fn mul_hi_internal(a: Simd<u64, 4>, b: Simd<u64, 4>) -> Simd<u64, 4> {
+  let a_lo = a & UINT_MAX;
+  let a_hi = a >> 32;
+  let b_lo = b & UINT_MAX;
+  let b_hi = b >> 32;
+
+  let a_x_b_hi = a_hi * b_hi;
+  let a_x_b_mid = a_hi * b_lo;
+  let b_x_a_mid = b_hi * a_lo;
+  let a_x_b_lo = a_lo * b_lo;
+
+  let carry_bit = ((a_x_b_mid & UINT_MAX) + (b_x_a_mid & UINT_MAX) + (a_x_b_lo >> 32)) >> 32;
+
+  a_x_b_hi + (a_x_b_mid >> 32) + (b_x_a_mid >> 32) + carry_bit
+}
+
+#[inline]
+fn mul_hi_(a: [Simd<u64, 4>; 3], b: [Simd<u64, 4>; 3]) -> [Simd<u64, 4>; 3] {
+  [
+    mul_hi_internal(a[0], b[0]),
+    mul_hi_internal(a[1], b[1]),
+    mul_hi_internal(a[2], b[2]),
+  ]
 }
 
 #[inline]
@@ -45,6 +74,36 @@ pub fn vec_mul_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
 }
 
 #[inline]
+pub fn vec_mul_ff_p64_internal(a: Simd<u64, 4>, b: Simd<u64, 4>) -> Simd<u64, 4> {
+  let ab = a * b;
+  let cd = mul_hi_internal(a, b);
+  let c = cd & UINT_MAX;
+  let d = cd >> 32;
+
+  let tmp0 = ab - d;
+  let under0 = ab.lanes_lt(d);
+  let tmp1 = under0.select(ONES_, ZEROS_) * UINT_MAX;
+  let tmp2 = tmp0 - tmp1;
+
+  let tmp3 = (c << 32) - c;
+
+  let tmp4 = tmp2 + tmp3;
+  let over0 = tmp2.lanes_gt(ULONG_MAX - tmp3);
+  let tmp5 = over0.select(ONES_, ZEROS_) * UINT_MAX;
+
+  tmp4 + tmp5
+}
+
+#[inline]
+pub fn vec_mul_ff_p64_(a: [Simd<u64, 4>; 3], b: [Simd<u64, 4>; 3]) -> [Simd<u64, 4>; 3] {
+  [
+    vec_mul_ff_p64_internal(a[0], b[0]),
+    vec_mul_ff_p64_internal(a[1], b[1]),
+    vec_mul_ff_p64_internal(a[2], b[2]),
+  ]
+}
+
+#[inline]
 pub fn vec_add_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
   let b_ok = to_canonical(b);
 
@@ -57,6 +116,35 @@ pub fn vec_add_ff_p64(a: Simd<u64, 16>, b: Simd<u64, 16>) -> Simd<u64, 16> {
   let tmp3 = over1.select(ONES, ZEROS) * UINT_MAX;
 
   tmp2 + tmp3
+}
+
+#[inline]
+pub fn vec_add_ff_p64_internal(a: Simd<u64, 4>, b: Simd<u64, 4>) -> Simd<u64, 4> {
+  // replaced call to `to_canonical` with following
+  // modulo division operation
+  //
+  // suggested here https://github.com/rust-lang/portable-simd/issues/215#issuecomment-997106309
+  // for exploration purposes
+  let b_ok = b % MOD;
+
+  let tmp0 = a + b_ok;
+  let over0 = a.lanes_gt(ULONG_MAX - b_ok);
+  let tmp1 = over0.select(ONES_, ZEROS_) * UINT_MAX;
+
+  let tmp2 = tmp0 + tmp1;
+  let over1 = tmp0.lanes_gt(ULONG_MAX - tmp1);
+  let tmp3 = over1.select(ONES_, ZEROS_) * UINT_MAX;
+
+  tmp2 + tmp3
+}
+
+#[inline]
+pub fn vec_add_ff_p64_(a: [Simd<u64, 4>; 3], b: [Simd<u64, 4>; 3]) -> [Simd<u64, 4>; 3] {
+  [
+    vec_add_ff_p64_internal(a[0], b[0]),
+    vec_add_ff_p64_internal(a[1], b[1]),
+    vec_add_ff_p64_internal(a[2], b[2]),
+  ]
 }
 
 #[inline]
