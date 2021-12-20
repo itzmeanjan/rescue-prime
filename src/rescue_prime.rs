@@ -394,11 +394,8 @@ pub fn merge(
 
 #[cfg(test)]
 mod test {
-  extern crate test;
   use super::super::ff::to_canonical;
   use super::*;
-  use test::black_box;
-  use test::Bencher;
 
   #[test]
   fn test_apply_sbox() {
@@ -564,39 +561,5 @@ mod test {
       hash_elements(&state, mds, ark1, ark2),
       merge(state, mds, ark1, ark2)
     );
-  }
-
-  #[bench]
-  fn bench_hash_elements(b: &mut Bencher) {
-    let input: [u64; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
-    let mds = crate::rescue_constants::prepare_mds();
-    let ark1 = crate::rescue_constants::prepare_ark1();
-    let ark2 = crate::rescue_constants::prepare_ark2();
-
-    b.iter(|| {
-      hash_elements(
-        black_box(&input),
-        black_box(mds),
-        black_box(ark1),
-        black_box(ark2),
-      )
-    });
-  }
-
-  #[bench]
-  fn bench_merge(b: &mut Bencher) {
-    let input: [u64; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
-    let mds = crate::rescue_constants::prepare_mds();
-    let ark1 = crate::rescue_constants::prepare_ark1();
-    let ark2 = crate::rescue_constants::prepare_ark2();
-
-    b.iter(|| {
-      merge(
-        black_box(input),
-        black_box(mds),
-        black_box(ark1),
-        black_box(ark2),
-      )
-    });
   }
 }

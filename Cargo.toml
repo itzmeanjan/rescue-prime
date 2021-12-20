@@ -3,5 +3,15 @@ name = "simd-rescue-prime"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+bench = false
+
+[[bench]]
+name = "rescue_prime"
+harness = false
+
 [dependencies]
 rand = "0.8.2"
+
+[dev-dependencies]
+criterion = "0.3.5"

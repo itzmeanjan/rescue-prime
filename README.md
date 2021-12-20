@@ -12,7 +12,7 @@ This time I decided to implement Rescue Prime Hash function on 64-bit prime fiel
 
 > More about it [here](http://github.com/rust-lang/rust/issues/86656).
 
-> Notice, this crate [overrides](https://github.com/itzmeanjan/simd-rescue-prime/blob/9e83eb579a6e7666ae33d2c86524d8e287e7f1ca/rust-toolchain) default Rust toolchain version to use `portable_simd` feature.
+> Notice, this library crate [overrides](https://github.com/itzmeanjan/simd-rescue-prime/blob/9e83eb579a6e7666ae33d2c86524d8e287e7f1ca/rust-toolchain) default Rust toolchain version to use `portable_simd` feature.
 
 This implementation takes quite a lot of motivation from [this OpenCL kernel](https://github.com/itzmeanjan/vectorized-rescue-prime/blob/614500dd1f271e4f8badf1305c8077e2532eb510/kernel.cl), where I implemented Rescue Prime Hash using OpenCL vector intrinsics.
 
@@ -27,14 +27,23 @@ Resue Prime Hash state is represented using a SIMD vector with 16 lanes, where e
 cargo test
 ```
 
+- Before running benchmark ensure you've installed benchmark runner abstraction
+
+```bash
+cargo install cargo-criterion
+```
+
 - Run benchmark on `hash_elements` and `merge` functions
 
 ```bash
-RUSTFLAGS="-C target-cpu=native" cargo bench --lib -vv
+RUSTFLAGS="-C target-cpu=native" cargo criterion --output-format verbose
 
-# consider enabling CPU specific vector instructions by passing
+# Above command just compiles code with default CPU features found in
+# compilation runner machine
 #
-# RUSTFLAGS=`-C target-feature=+{avx,avx2,avx512vl,sse4.2,sse4.1,sse4a,neon}`
+# Consider enabling CPU specific vector instructions by passing
+#
+# RUSTFLAGS=`-C target-feature=+{avx,avx2,avx512vl,avx512f,avx512dq,sse4.2,sse4.1,sse4a,neon}`
 #
 # check below benchmark result table for flags I've used
 ```
@@ -78,7 +87,7 @@ FLAGS | CPU | `hash_elements` | `merge`
 
 ---
 
-> Above benchmarks are obtained by running `$FLAGS cargo bench --lib`, where FLAGS denote content of *FLAGS* column in above table.
+> Above benchmarks are obtained by running `$FLAGS cargo criterion --output-format verbose`, where FLAGS denote content of *FLAGS* column in above table, as applicable on target machine.
 
 You may want to check your supported CPU features by running
 
