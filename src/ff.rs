@@ -319,4 +319,53 @@ mod test {
       [0xfffffffeu64; 16]
     );
   }
+
+  #[test]
+  fn test_ff_add_0_() {
+    let a = [random_vector_(), random_vector_(), random_vector_()];
+    let res = vec_add_ff_p64_(a, [ZEROS_; 3]);
+
+    assert_eq!((res[0] % MOD).to_array(), a[0].to_array());
+    assert_eq!((res[1] % MOD).to_array(), a[1].to_array());
+    assert_eq!((res[2] % MOD).to_array(), a[2].to_array());
+  }
+
+  #[test]
+  fn test_ff_add_1_() {
+    let a = [Simd::from_array([2u64; 4]); 3];
+    let b = [Simd::from_array([3u64; 4]); 3];
+    let res = vec_add_ff_p64_(a, b);
+
+    assert_eq!((res[0] % MOD).to_array(), [5u64; 4]);
+    assert_eq!((res[1] % MOD).to_array(), [5u64; 4]);
+    assert_eq!((res[2] % MOD).to_array(), [5u64; 4]);
+  }
+
+  #[test]
+  fn test_ff_add_2_() {
+    let a = [Simd::from_array([MOD - 1; 4]); 3];
+    let b = [ONES_; 3];
+    let c: [Simd<u64, 4>; 3] = [Simd::splat(2u64); 3];
+
+    let res_0 = vec_add_ff_p64_(a, b);
+    assert_eq!((res_0[0] % MOD).to_array(), [0u64; 4]);
+    assert_eq!((res_0[1] % MOD).to_array(), [0u64; 4]);
+    assert_eq!((res_0[2] % MOD).to_array(), [0u64; 4]);
+
+    let res_1 = vec_add_ff_p64_(a, c);
+    assert_eq!((res_1[0] % MOD).to_array(), [1u64; 4]);
+    assert_eq!((res_1[1] % MOD).to_array(), [1u64; 4]);
+    assert_eq!((res_1[2] % MOD).to_array(), [1u64; 4]);
+  }
+
+  #[test]
+  fn test_ff_add_3_() {
+    let a = [Simd::from_array([MOD - 1; 4]); 3];
+    let b = [Simd::from_array([0xffffffffu64; 4]); 3];
+
+    let res = vec_add_ff_p64_(a, b);
+    assert_eq!((res[0] % MOD).to_array(), [0xfffffffeu64; 4]);
+    assert_eq!((res[1] % MOD).to_array(), [0xfffffffeu64; 4]);
+    assert_eq!((res[2] % MOD).to_array(), [0xfffffffeu64; 4]);
+  }
 }
