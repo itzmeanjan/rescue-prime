@@ -109,7 +109,7 @@ fn apply_mds_(state: [Simd<u64, 4>; 3], mds: [Simd<u64, 4>; 36]) -> [Simd<u64, 4
   let s7 = reduce_sum_(vec_mul_ff_p64_(state, mds[21..24].try_into().unwrap()));
 
   let s8 = reduce_sum_(vec_mul_ff_p64_(state, mds[24..27].try_into().unwrap()));
-  let s9 = reduce_sum_(vec_mul_ff_p64_(state, mds[27..31].try_into().unwrap()));
+  let s9 = reduce_sum_(vec_mul_ff_p64_(state, mds[27..30].try_into().unwrap()));
   let s10 = reduce_sum_(vec_mul_ff_p64_(state, mds[30..33].try_into().unwrap()));
   let s11 = reduce_sum_(vec_mul_ff_p64_(state, mds[33..36].try_into().unwrap()));
 
@@ -241,12 +241,8 @@ fn apply_rescue_permutation_(
     state = apply_permutation_round_(
       state,
       mds,
-      ark1[i * NUM_ROUNDS..(i + 1) * NUM_ROUNDS]
-        .try_into()
-        .unwrap(),
-      ark2[i * NUM_ROUNDS..(i + 1) * NUM_ROUNDS]
-        .try_into()
-        .unwrap(),
+      ark1[i * 3..(i + 1) * 3].try_into().unwrap(),
+      ark2[i * 3..(i + 1) * 3].try_into().unwrap(),
     );
   }
 
@@ -584,151 +580,157 @@ pub fn merge_(
 
 #[cfg(test)]
 mod test {
-  use super::super::ff::to_canonical;
   use super::*;
 
   #[test]
   fn test_apply_sbox() {
-    let state: Simd<u64, 16> = Simd::from_array([
-      1 << 10,
-      1 << 11,
-      1 << 12,
-      1 << 13,
-      1 << 20,
-      1 << 21,
-      1 << 22,
-      1 << 23,
-      1 << 60,
-      1 << 61,
-      1 << 62,
-      1 << 63,
-      0,
-      0,
-      0,
-      0,
-    ]);
-
-    let exp_state: [u64; 16] = [
-      274877906880,
-      35184372080640,
-      4503599626321920,
-      576460752169205760,
-      18446726477228539905,
-      18444492269600899073,
-      18158513693262872577,
-      18446744060824649731,
-      68719476736,
-      8796093022208,
-      1125899906842624,
-      144115188075855872,
-      0,
-      0,
-      0,
-      0,
+    let state: [Simd<u64, 4>; 3] = [
+      Simd::from_array([1 << 10, 1 << 11, 1 << 12, 1 << 13]),
+      Simd::from_array([1 << 20, 1 << 21, 1 << 22, 1 << 23]),
+      Simd::from_array([1 << 60, 1 << 61, 1 << 62, 1 << 63]),
     ];
+    let res = apply_sbox_(state);
 
-    assert_eq!(to_canonical(apply_sbox(state)).to_array(), exp_state);
+    assert_eq!(
+      (res[0] % MOD).to_array(),
+      [
+        274877906880,
+        35184372080640,
+        4503599626321920,
+        576460752169205760,
+      ]
+    );
+    assert_eq!(
+      (res[1] % MOD).to_array(),
+      [
+        18446726477228539905,
+        18444492269600899073,
+        18158513693262872577,
+        18446744060824649731,
+      ]
+    );
+    assert_eq!(
+      (res[2] % MOD).to_array(),
+      [
+        68719476736,
+        8796093022208,
+        1125899906842624,
+        144115188075855872,
+      ]
+    );
   }
 
   #[test]
   fn test_apply_inv_sbox() {
-    let state: Simd<u64, 16> = Simd::from_array([
-      1 << 10,
-      1 << 11,
-      1 << 12,
-      1 << 13,
-      1 << 20,
-      1 << 21,
-      1 << 22,
-      1 << 23,
-      1 << 60,
-      1 << 61,
-      1 << 62,
-      1 << 63,
-      0,
-      0,
-      0,
-      0,
-    ]);
-
-    let exp_state: [u64; 16] = [
-      18446743794536677441,
-      536870912,
-      4503599626321920,
-      18446735273321562113,
-      18446726477228539905,
-      8,
-      288230376151711744,
-      18446744069414453249,
-      68719476736,
-      576460752169205760,
-      18445618169507741697,
-      512,
-      0,
-      0,
-      0,
-      0,
+    let state: [Simd<u64, 4>; 3] = [
+      Simd::from_array([1 << 10, 1 << 11, 1 << 12, 1 << 13]),
+      Simd::from_array([1 << 20, 1 << 21, 1 << 22, 1 << 23]),
+      Simd::from_array([1 << 60, 1 << 61, 1 << 62, 1 << 63]),
     ];
+    let res = apply_inv_sbox_(state);
 
-    assert_eq!(to_canonical(apply_inv_sbox(state)).to_array(), exp_state);
+    assert_eq!(
+      (res[0] % MOD).to_array(),
+      [
+        18446743794536677441,
+        536870912,
+        4503599626321920,
+        18446735273321562113,
+      ]
+    );
+    assert_eq!(
+      (res[1] % MOD).to_array(),
+      [
+        18446726477228539905,
+        8,
+        288230376151711744,
+        18446744069414453249,
+      ]
+    );
+    assert_eq!(
+      (res[2] % MOD).to_array(),
+      [68719476736, 576460752169205760, 18445618169507741697, 512,]
+    );
   }
 
   #[test]
   fn test_apply_rescue_permutation() {
-    let state: Simd<u64, 16> = Simd::from_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0, 0, 0]);
-    let mds = crate::rescue_constants::prepare_mds();
-    let ark1 = crate::rescue_constants::prepare_ark1();
-    let ark2 = crate::rescue_constants::prepare_ark2();
-
-    let exp_state: [u64; 16] = [
-      10809974140050983728,
-      6938491977181280539,
-      8834525837561071698,
-      6854417192438540779,
-      4476630872663101667,
-      6292749486700362097,
-      18386622366690620454,
-      10614098972800193173,
-      7543273285584849722,
-      9490898458612615694,
-      9030271581669113292,
-      10101107035874348250,
-      0,
-      0,
-      0,
-      0,
+    let state: [Simd<u64, 4>; 3] = [
+      Simd::from_array([0, 1, 2, 3]),
+      Simd::from_array([4, 5, 6, 7]),
+      Simd::from_array([8, 9, 10, 11]),
     ];
+    let mds = crate::rescue_constants::prepare_mds_();
+    let ark1 = crate::rescue_constants::prepare_ark1_();
+    let ark2 = crate::rescue_constants::prepare_ark2_();
+    let res = apply_rescue_permutation_(state, mds, ark1, ark2);
 
     assert_eq!(
-      to_canonical(apply_rescue_permutation(state, mds, ark1, ark2)).to_array(),
-      exp_state
+      (res[0] % MOD).to_array(),
+      [
+        10809974140050983728,
+        6938491977181280539,
+        8834525837561071698,
+        6854417192438540779,
+      ]
+    );
+    assert_eq!(
+      (res[1] % MOD).to_array(),
+      [
+        4476630872663101667,
+        6292749486700362097,
+        18386622366690620454,
+        10614098972800193173,
+      ]
+    );
+    assert_eq!(
+      (res[2] % MOD).to_array(),
+      [
+        7543273285584849722,
+        9490898458612615694,
+        9030271581669113292,
+        10101107035874348250,
+      ]
     );
   }
 
   #[test]
   fn test_apply_mds() {
-    let state: Simd<u64, 16> = Simd::from_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0, 0, 0]);
-    let mds = crate::rescue_constants::prepare_mds();
-    let exp_state: [u64; 16] = [
-      8268579649362235275,
-      2236502997719307940,
-      4445585223683938180,
-      8490351819144058838,
-      17912450758129541069,
-      12381447012212465193,
-      6444916863184583255,
-      5403602327365240081,
-      7656905977925454065,
-      12880871053868334997,
-      13669293285556299269,
-      2401034710645280649,
-      0,
-      0,
-      0,
-      0,
+    let state: [Simd<u64, 4>; 3] = [
+      Simd::from_array([0, 1, 2, 3]),
+      Simd::from_array([4, 5, 6, 7]),
+      Simd::from_array([8, 9, 10, 11]),
     ];
+    let mds = crate::rescue_constants::prepare_mds_();
+    let res = apply_mds_(state, mds);
 
-    assert_eq!(to_canonical(apply_mds(state, mds)).to_array(), exp_state);
+    assert_eq!(
+      (res[0] % MOD).to_array(),
+      [
+        8268579649362235275,
+        2236502997719307940,
+        4445585223683938180,
+        8490351819144058838,
+      ]
+    );
+    assert_eq!(
+      (res[1] % MOD).to_array(),
+      [
+        17912450758129541069,
+        12381447012212465193,
+        6444916863184583255,
+        5403602327365240081,
+      ]
+    );
+    assert_eq!(
+      (res[2] % MOD).to_array(),
+      [
+        7656905977925454065,
+        12880871053868334997,
+        13669293285556299269,
+        2401034710645280649,
+      ]
+    );
   }
 
   #[test]
@@ -743,13 +745,13 @@ mod test {
       1 << 6,
       1 << 7,
     ];
-    let mds = crate::rescue_constants::prepare_mds();
-    let ark1 = crate::rescue_constants::prepare_ark1();
-    let ark2 = crate::rescue_constants::prepare_ark2();
+    let mds = crate::rescue_constants::prepare_mds_();
+    let ark1 = crate::rescue_constants::prepare_ark1_();
+    let ark2 = crate::rescue_constants::prepare_ark2_();
 
     assert_eq!(
-      hash_elements(&state, mds, ark1, ark2),
-      merge(state, mds, ark1, ark2)
+      hash_elements_(&state, mds, ark1, ark2),
+      merge_(state, mds, ark1, ark2)
     );
   }
 }
