@@ -1,5 +1,5 @@
-use super::ff::{vec_add_ff_p64, vec_mul_ff_p64, MOD};
-use std::simd::{simd_swizzle, Simd, Which::*};
+use super::ff::{vec_add_ff_p64, vec_add_ff_p64_, vec_mul_ff_p64, MOD, ZEROS};
+use std::simd::Simd;
 
 const NUM_ROUNDS: usize = 7;
 const RATE_WIDTH: usize = 8;
@@ -141,40 +141,22 @@ pub fn hash_elements(
   ark1: [Simd<u64, 4>; 21],
   ark2: [Simd<u64, 4>; 21],
 ) -> [u64; 4] {
-  let mut state: [Simd<u64, 4>; 3] = [
-    Simd::splat(0),
-    Simd::splat(0),
-    Simd::from_array([0, 0, 0, input.len() as u64 % MOD]),
-  ];
+  let l = input.len();
+  let mut state: [Simd<u64, 4>; 3] = [ZEROS, ZEROS, Simd::from_array([0, 0, 0, l as u64 % MOD])];
 
   let mut i = 0;
-  for &elm in input.iter() {
-    let a = match i {
-      0 => state[0].to_array()[0],
-      1 => state[0].to_array()[1],
-      2 => state[0].to_array()[2],
-      3 => state[0].to_array()[3],
-      4 => state[1].to_array()[0],
-      5 => state[1].to_array()[1],
-      6 => state[1].to_array()[2],
-      7 => state[1].to_array()[3],
-      _ => state[2].to_array()[0], // control flow should never arrive here !
-    };
-    let b = Simd::<u64, 4>::splat(reduce_add(elm, a));
+  for j in (0..l).step_by(4) {
+    let input_: Simd<u64, 4> = if j + 4 <= l {
+      Simd::from_slice(&input[j..j + 4])
+    } else {
+      let mut a_: Vec<u64> = vec![0, 0, 0, 0];
+      let _ = &a_[..(input.len() - j)].copy_from_slice(&input[j..l]);
 
-    match i {
-      0 => state[0] = simd_swizzle!(state[0], b, [Second(0), First(1), First(2), First(3),]),
-      1 => state[0] = simd_swizzle!(state[0], b, [First(0), Second(1), First(2), First(3),]),
-      2 => state[0] = simd_swizzle!(state[0], b, [First(0), First(1), Second(2), First(3),]),
-      3 => state[0] = simd_swizzle!(state[0], b, [First(0), First(1), First(2), Second(3),]),
-      4 => state[1] = simd_swizzle!(state[1], b, [Second(0), First(1), First(2), First(3),]),
-      5 => state[1] = simd_swizzle!(state[1], b, [First(0), Second(1), First(2), First(3),]),
-      6 => state[1] = simd_swizzle!(state[1], b, [First(0), First(1), Second(2), First(3),]),
-      7 => state[1] = simd_swizzle!(state[1], b, [First(0), First(1), First(2), Second(3),]),
-      _ => {} // control flow should never arrive here !
+      Simd::from_slice(&a_[..])
     };
+    state[i >> 2] = vec_add_ff_p64_(state[i >> 2], input_);
 
-    i += 1;
+    i += 4;
     if i % RATE_WIDTH == 0 {
       state = apply_rescue_permutation(state, mds, ark1, ark2);
       i = 0;

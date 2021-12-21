@@ -4,7 +4,7 @@ pub const ULONG_MAX: u64 = 0xffffffffffffffff;
 pub const UINT_MAX: u64 = 0xffffffff;
 pub const MOD: u64 = 0xffffffff00000001;
 
-const ZEROS: Simd<u64, 4> = Simd::splat(0u64);
+pub const ZEROS: Simd<u64, 4> = Simd::splat(0u64);
 const ONES: Simd<u64, 4> = Simd::splat(1u64);
 
 #[inline]
