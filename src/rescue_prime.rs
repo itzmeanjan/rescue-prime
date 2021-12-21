@@ -1,8 +1,6 @@
-use super::ff::{vec_add_ff_p64, vec_mul_ff_p64, MOD, UINT_MAX, ULONG_MAX};
+use super::ff::{vec_add_ff_p64, vec_mul_ff_p64, MOD};
 use std::simd::{simd_swizzle, Simd, Which::*};
 
-const ZEROS_1: Simd<u64, 1> = Simd::from_array([0u64; 1]);
-const ONES_1: Simd<u64, 1> = Simd::from_array([1u64; 1]);
 const NUM_ROUNDS: usize = 7;
 const RATE_WIDTH: usize = 8;
 
@@ -21,29 +19,21 @@ fn apply_constants(state: [Simd<u64, 4>; 3], cnst: [Simd<u64, 4>; 3]) -> [Simd<u
 }
 
 #[inline]
-fn reduce_sum_vec2(a: Simd<u64, 2>) -> u64 {
-  let a0 = simd_swizzle!(a, [0]);
+fn reduce_add(a: u64, mut b: u64) -> u64 {
+  if b >= MOD {
+    b -= MOD;
+  }
 
-  let a1 = simd_swizzle!(a, [1]);
-  let over0 = a1.lanes_ge(Simd::from_array([MOD; 1]));
-  let a1_ok = a1 - over0.select(ONES_1, ZEROS_1) * MOD;
-
-  let tmp1 = a0 + a1_ok;
-  let over1 = a0.lanes_gt(ULONG_MAX - a1_ok);
-  let tmp2 = over1.select(ONES_1, ZEROS_1) * UINT_MAX;
-
-  let tmp3 = tmp1 + tmp2;
-  let over2 = tmp1.lanes_gt(ULONG_MAX - tmp2);
-  let tmp4 = over2.select(ONES_1, ZEROS_1) * UINT_MAX;
-
-  (tmp3 + tmp4).to_array()[0]
+  let (res, over) = a.overflowing_add(b);
+  res.wrapping_sub(MOD * (over as u64))
 }
 
 #[inline]
 fn reduce_sum_vec4(a: Simd<u64, 4>) -> u64 {
-  let a0 = reduce_sum_vec2(simd_swizzle!(a, [0, 1]));
-  let a1 = reduce_sum_vec2(simd_swizzle!(a, [2, 3]));
-  reduce_sum_vec2(Simd::from_array([a0, a1]))
+  let a_ = a.to_array();
+  let a0 = reduce_add(a_[0], a_[1]);
+  let a1 = reduce_add(a_[2], a_[3]);
+  reduce_add(a0, a1)
 }
 
 #[inline]
@@ -159,30 +149,28 @@ pub fn hash_elements(
 
   let mut i = 0;
   for &elm in input.iter() {
-    let a = Simd::<u64, 1>::splat(elm);
-    let b = match i {
-      0 => simd_swizzle!(state[0], [0]),
-      1 => simd_swizzle!(state[0], [1]),
-      2 => simd_swizzle!(state[0], [2]),
-      3 => simd_swizzle!(state[0], [3]),
-      4 => simd_swizzle!(state[1], [0]),
-      5 => simd_swizzle!(state[1], [1]),
-      6 => simd_swizzle!(state[1], [2]),
-      7 => simd_swizzle!(state[1], [3]),
-      _ => simd_swizzle!(state[2], [0]), // control flow should never arrive here !
+    let a = match i {
+      0 => state[0].to_array()[0],
+      1 => state[0].to_array()[1],
+      2 => state[0].to_array()[2],
+      3 => state[0].to_array()[3],
+      4 => state[1].to_array()[0],
+      5 => state[1].to_array()[1],
+      6 => state[1].to_array()[2],
+      7 => state[1].to_array()[3],
+      _ => state[2].to_array()[0], // control flow should never arrive here !
     };
-    let c = simd_swizzle!(a, b, [First(0), Second(0)]);
-    let d = Simd::<u64, 4>::splat(reduce_sum_vec2(c));
+    let b = Simd::<u64, 4>::splat(reduce_add(elm, a));
 
     match i {
-      0 => state[0] = simd_swizzle!(state[0], d, [Second(0), First(1), First(2), First(3),]),
-      1 => state[0] = simd_swizzle!(state[0], d, [First(0), Second(1), First(2), First(3),]),
-      2 => state[0] = simd_swizzle!(state[0], d, [First(0), First(1), Second(2), First(3),]),
-      3 => state[0] = simd_swizzle!(state[0], d, [First(0), First(1), First(2), Second(3),]),
-      4 => state[1] = simd_swizzle!(state[1], d, [Second(0), First(1), First(2), First(3),]),
-      5 => state[1] = simd_swizzle!(state[1], d, [First(0), Second(1), First(2), First(3),]),
-      6 => state[1] = simd_swizzle!(state[1], d, [First(0), First(1), Second(2), First(3),]),
-      7 => state[1] = simd_swizzle!(state[1], d, [First(0), First(1), First(2), Second(3),]),
+      0 => state[0] = simd_swizzle!(state[0], b, [Second(0), First(1), First(2), First(3),]),
+      1 => state[0] = simd_swizzle!(state[0], b, [First(0), Second(1), First(2), First(3),]),
+      2 => state[0] = simd_swizzle!(state[0], b, [First(0), First(1), Second(2), First(3),]),
+      3 => state[0] = simd_swizzle!(state[0], b, [First(0), First(1), First(2), Second(3),]),
+      4 => state[1] = simd_swizzle!(state[1], b, [Second(0), First(1), First(2), First(3),]),
+      5 => state[1] = simd_swizzle!(state[1], b, [First(0), Second(1), First(2), First(3),]),
+      6 => state[1] = simd_swizzle!(state[1], b, [First(0), First(1), Second(2), First(3),]),
+      7 => state[1] = simd_swizzle!(state[1], b, [First(0), First(1), First(2), Second(3),]),
       _ => {} // control flow should never arrive here !
     };
 

@@ -56,8 +56,8 @@ pub fn vec_mul_ff_p64(a: [Simd<u64, 4>; 3], b: [Simd<u64, 4>; 3]) -> [Simd<u64, 
 
 #[inline]
 pub fn vec_add_ff_p64_(a: Simd<u64, 4>, b: Simd<u64, 4>) -> Simd<u64, 4> {
-  // replaced call to `to_canonical` with following
-  // modulo division operation
+  // replaced call to `to_canonical` ( more https://github.com/itzmeanjan/simd-rescue-prime/blob/46d9e8b/src/ff.rs#L62-L69 )
+  // with following modulo division operation
   //
   // suggested here https://github.com/rust-lang/portable-simd/issues/215#issuecomment-997106309
   // for exploration purposes
