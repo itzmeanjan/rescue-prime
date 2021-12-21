@@ -1,17 +1,7 @@
 use std::convert::TryInto;
 use std::simd::Simd;
 
-pub fn prepare_mds() -> [Simd<u64, 16>; 12] {
-  let mut mds: Vec<Simd<u64, 16>> = Vec::with_capacity(12);
-  for i in 0..12 {
-    let m0: [u64; 16] = MDS[i * 16..(i + 1) * 16].try_into().unwrap();
-    let m1 = Simd::from_array(m0);
-    mds.push(m1);
-  }
-  mds.try_into().unwrap()
-}
-
-pub fn prepare_mds_() -> [Simd<u64, 4>; 36] {
+pub fn prepare_mds() -> [Simd<u64, 4>; 36] {
   let mut mds: Vec<Simd<u64, 4>> = Vec::with_capacity(36);
   for i in 0..36 {
     let m0: [u64; 4] = MDS[i * 4..(i + 1) * 4].try_into().unwrap();
@@ -21,17 +11,7 @@ pub fn prepare_mds_() -> [Simd<u64, 4>; 36] {
   mds.try_into().unwrap()
 }
 
-pub fn prepare_ark1() -> [Simd<u64, 16>; 7] {
-  let mut ark1: Vec<Simd<u64, 16>> = Vec::with_capacity(7);
-  for i in 0..7 {
-    let m0: [u64; 16] = ARK1[i * 16..(i + 1) * 16].try_into().unwrap();
-    let m1 = Simd::from_array(m0);
-    ark1.push(m1);
-  }
-  ark1.try_into().unwrap()
-}
-
-pub fn prepare_ark1_() -> [Simd<u64, 4>; 21] {
+pub fn prepare_ark1() -> [Simd<u64, 4>; 21] {
   let mut ark1: Vec<Simd<u64, 4>> = Vec::with_capacity(21);
   for i in 0..21 {
     let m0: [u64; 4] = ARK1[i * 4..(i + 1) * 4].try_into().unwrap();
@@ -41,17 +21,7 @@ pub fn prepare_ark1_() -> [Simd<u64, 4>; 21] {
   ark1.try_into().unwrap()
 }
 
-pub fn prepare_ark2() -> [Simd<u64, 16>; 7] {
-  let mut ark2: Vec<Simd<u64, 16>> = Vec::with_capacity(7);
-  for i in 0..7 {
-    let m0: [u64; 16] = ARK2[i * 16..(i + 1) * 16].try_into().unwrap();
-    let m1 = Simd::from_array(m0);
-    ark2.push(m1);
-  }
-  ark2.try_into().unwrap()
-}
-
-pub fn prepare_ark2_() -> [Simd<u64, 4>; 21] {
+pub fn prepare_ark2() -> [Simd<u64, 4>; 21] {
   let mut ark2: Vec<Simd<u64, 4>> = Vec::with_capacity(21);
   for i in 0..21 {
     let m0: [u64; 4] = ARK2[i * 4..(i + 1) * 4].try_into().unwrap();
