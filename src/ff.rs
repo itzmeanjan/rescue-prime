@@ -1,14 +1,14 @@
-use std::simd::Simd;
+use std::simd::{u64x4, Simd};
 
 pub const ULONG_MAX: u64 = 0xffffffffffffffff;
 pub const UINT_MAX: u64 = 0xffffffff;
 pub const MOD: u64 = 0xffffffff00000001;
 
-pub const ZEROS: Simd<u64, 4> = Simd::splat(0u64);
-const ONES: Simd<u64, 4> = Simd::splat(1u64);
+pub const ZEROS: u64x4 = Simd::splat(0u64);
+const ONES: u64x4 = Simd::splat(1u64);
 
 #[inline]
-fn mul_hi_(a: Simd<u64, 4>, b: Simd<u64, 4>) -> Simd<u64, 4> {
+fn mul_hi_(a: u64x4, b: u64x4) -> u64x4 {
   let a_lo = a & UINT_MAX;
   let a_hi = a >> 32;
   let b_lo = b & UINT_MAX;
@@ -25,7 +25,7 @@ fn mul_hi_(a: Simd<u64, 4>, b: Simd<u64, 4>) -> Simd<u64, 4> {
 }
 
 #[inline]
-fn vec_mul_ff_p64_(a: Simd<u64, 4>, b: Simd<u64, 4>) -> Simd<u64, 4> {
+fn vec_mul_ff_p64_(a: u64x4, b: u64x4) -> u64x4 {
   let ab = a * b;
   let cd = mul_hi_(a, b);
   let c = cd & UINT_MAX;
@@ -46,7 +46,7 @@ fn vec_mul_ff_p64_(a: Simd<u64, 4>, b: Simd<u64, 4>) -> Simd<u64, 4> {
 }
 
 #[inline]
-pub fn vec_mul_ff_p64(a: [Simd<u64, 4>; 3], b: [Simd<u64, 4>; 3]) -> [Simd<u64, 4>; 3] {
+pub fn vec_mul_ff_p64(a: [u64x4; 3], b: [u64x4; 3]) -> [u64x4; 3] {
   [
     vec_mul_ff_p64_(a[0], b[0]),
     vec_mul_ff_p64_(a[1], b[1]),
@@ -55,7 +55,7 @@ pub fn vec_mul_ff_p64(a: [Simd<u64, 4>; 3], b: [Simd<u64, 4>; 3]) -> [Simd<u64, 
 }
 
 #[inline]
-pub fn vec_add_ff_p64_(a: Simd<u64, 4>, b: Simd<u64, 4>) -> Simd<u64, 4> {
+pub fn vec_add_ff_p64_(a: u64x4, b: u64x4) -> u64x4 {
   // replaced call to `to_canonical` ( more https://github.com/itzmeanjan/simd-rescue-prime/blob/46d9e8b/src/ff.rs#L62-L69 )
   // with following modulo division operation
   //
@@ -75,7 +75,7 @@ pub fn vec_add_ff_p64_(a: Simd<u64, 4>, b: Simd<u64, 4>) -> Simd<u64, 4> {
 }
 
 #[inline]
-pub fn vec_add_ff_p64(a: [Simd<u64, 4>; 3], b: [Simd<u64, 4>; 3]) -> [Simd<u64, 4>; 3] {
+pub fn vec_add_ff_p64(a: [u64x4; 3], b: [u64x4; 3]) -> [u64x4; 3] {
   [
     vec_add_ff_p64_(a[0], b[0]),
     vec_add_ff_p64_(a[1], b[1]),
@@ -89,7 +89,7 @@ mod test {
   use super::*;
   use std::convert::TryInto;
 
-  fn random_vector() -> Simd<u64, 4> {
+  fn random_vector() -> u64x4 {
     let mut a = Vec::with_capacity(4);
     for _ in 0..4 {
       a.push(rand::random::<u64>() % MOD);
@@ -111,8 +111,8 @@ mod test {
 
   #[test]
   fn test_ff_mul_2_() {
-    let a: Simd<u64, 4> = Simd::splat(3u64);
-    let b: Simd<u64, 4> = Simd::splat(5u64);
+    let a: u64x4 = Simd::splat(3u64);
+    let b: u64x4 = Simd::splat(5u64);
     assert_eq!((vec_mul_ff_p64_(a, b) % MOD).to_array(), [15u64; 4]);
   }
 
@@ -174,7 +174,7 @@ mod test {
   fn test_ff_add_2_() {
     let a = [Simd::from_array([MOD - 1; 4]); 3];
     let b = [ONES; 3];
-    let c: [Simd<u64, 4>; 3] = [Simd::splat(2u64); 3];
+    let c: [u64x4; 3] = [Simd::splat(2u64); 3];
 
     let res_0 = vec_add_ff_p64(a, b);
     assert_eq!((res_0[0] % MOD).to_array(), [0u64; 4]);
