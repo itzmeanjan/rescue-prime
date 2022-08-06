@@ -20,9 +20,7 @@ fn apply_constants(state: [u64x4; 3], cnst: [u64x4; 3]) -> [u64x4; 3] {
 
 #[inline]
 fn reduce_add(a: u64, mut b: u64) -> u64 {
-    if b >= MOD {
-        b -= MOD;
-    }
+    b -= MOD * (b >= MOD) as u64;
 
     let (res, over) = a.overflowing_add(b);
     res.wrapping_sub(MOD * (over as u64))
