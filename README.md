@@ -84,6 +84,8 @@ FLAGS | CPU | `hash_elements` | `merge`
 `RUSTFLAGS="-C target-feature=+avx2"` | Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz | 17.646 us | 17.675 us
 `RUSTFLAGS="-C target-feature=+avx2"` | Intel(R) Core(TM) i3-5005U CPU @ 2.00GHz | 24.999 us | 25.024 us
 `RUSTFLAGS="-C target-feature=+neon,+a57"` | Cortex-A57 | 159.02 us | 160.74 us
+`RUSTFLAGS="-C target-cpu=native"` | Cortex-A72 | 124.06 us | 124.00 us
+`RUSTFLAGS="-C target-cpu=native"` | AWS Graviton3 | 28.754 us | 28.739 us
 
 ---
 
