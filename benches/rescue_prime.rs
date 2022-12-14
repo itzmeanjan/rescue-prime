@@ -13,9 +13,9 @@ fn bench_hash_elements(c: &mut Criterion) {
         b.iter(|| {
             hash_elements(
                 black_box(&input),
-                black_box(mds),
-                black_box(ark1),
-                black_box(ark2),
+                black_box(&mds),
+                black_box(&ark1),
+                black_box(&ark2),
             )
         });
     });
@@ -30,10 +30,10 @@ fn bench_merge(c: &mut Criterion) {
     c.bench_function("merge", |b| {
         b.iter(|| {
             merge(
-                black_box(input),
-                black_box(mds),
-                black_box(ark1),
-                black_box(ark2),
+                black_box(&input),
+                black_box(&mds),
+                black_box(&ark1),
+                black_box(&ark2),
             )
         });
     });

@@ -5,16 +5,16 @@ const NUM_ROUNDS: usize = 7;
 const RATE_WIDTH: usize = 8;
 
 #[inline]
-fn apply_sbox(state: [u64x4; 3]) -> [u64x4; 3] {
+fn apply_sbox(state: &[u64x4; 3]) -> [u64x4; 3] {
     let state2 = vec_mul_ff_p64(state, state);
-    let state4 = vec_mul_ff_p64(state2, state2);
-    let state6 = vec_mul_ff_p64(state2, state4);
+    let state4 = vec_mul_ff_p64(&state2, &state2);
+    let state6 = vec_mul_ff_p64(&state2, &state4);
 
-    vec_mul_ff_p64(state, state6)
+    vec_mul_ff_p64(state, &state6)
 }
 
 #[inline]
-fn apply_constants(state: [u64x4; 3], cnst: [u64x4; 3]) -> [u64x4; 3] {
+fn apply_constants(state: &[u64x4; 3], cnst: &[u64x4; 3]) -> [u64x4; 3] {
     vec_add_ff_p64(state, cnst)
 }
 
@@ -35,7 +35,7 @@ fn reduce_sum_vec4(a: u64x4) -> u64 {
 }
 
 #[inline]
-fn reduce_sum(a: [u64x4; 3]) -> u64 {
+fn reduce_sum(a: &[u64x4; 3]) -> u64 {
     let a0 = reduce_sum_vec4(a[0]);
     let a1 = reduce_sum_vec4(a[1]);
     let a2 = reduce_sum_vec4(a[2]);
@@ -43,21 +43,21 @@ fn reduce_sum(a: [u64x4; 3]) -> u64 {
 }
 
 #[inline]
-fn apply_mds(state: [u64x4; 3], mds: [u64x4; 36]) -> [u64x4; 3] {
-    let s0 = reduce_sum(vec_mul_ff_p64(state, mds[0..3].try_into().unwrap()));
-    let s1 = reduce_sum(vec_mul_ff_p64(state, mds[3..6].try_into().unwrap()));
-    let s2 = reduce_sum(vec_mul_ff_p64(state, mds[6..9].try_into().unwrap()));
-    let s3 = reduce_sum(vec_mul_ff_p64(state, mds[9..12].try_into().unwrap()));
+fn apply_mds(state: &[u64x4; 3], mds: &[u64x4; 36]) -> [u64x4; 3] {
+    let s0 = reduce_sum(&vec_mul_ff_p64(state, mds[0..3].try_into().unwrap()));
+    let s1 = reduce_sum(&vec_mul_ff_p64(state, mds[3..6].try_into().unwrap()));
+    let s2 = reduce_sum(&vec_mul_ff_p64(state, mds[6..9].try_into().unwrap()));
+    let s3 = reduce_sum(&vec_mul_ff_p64(state, mds[9..12].try_into().unwrap()));
 
-    let s4 = reduce_sum(vec_mul_ff_p64(state, mds[12..15].try_into().unwrap()));
-    let s5 = reduce_sum(vec_mul_ff_p64(state, mds[15..18].try_into().unwrap()));
-    let s6 = reduce_sum(vec_mul_ff_p64(state, mds[18..21].try_into().unwrap()));
-    let s7 = reduce_sum(vec_mul_ff_p64(state, mds[21..24].try_into().unwrap()));
+    let s4 = reduce_sum(&vec_mul_ff_p64(state, mds[12..15].try_into().unwrap()));
+    let s5 = reduce_sum(&vec_mul_ff_p64(state, mds[15..18].try_into().unwrap()));
+    let s6 = reduce_sum(&vec_mul_ff_p64(state, mds[18..21].try_into().unwrap()));
+    let s7 = reduce_sum(&vec_mul_ff_p64(state, mds[21..24].try_into().unwrap()));
 
-    let s8 = reduce_sum(vec_mul_ff_p64(state, mds[24..27].try_into().unwrap()));
-    let s9 = reduce_sum(vec_mul_ff_p64(state, mds[27..30].try_into().unwrap()));
-    let s10 = reduce_sum(vec_mul_ff_p64(state, mds[30..33].try_into().unwrap()));
-    let s11 = reduce_sum(vec_mul_ff_p64(state, mds[33..36].try_into().unwrap()));
+    let s8 = reduce_sum(&vec_mul_ff_p64(state, mds[24..27].try_into().unwrap()));
+    let s9 = reduce_sum(&vec_mul_ff_p64(state, mds[27..30].try_into().unwrap()));
+    let s10 = reduce_sum(&vec_mul_ff_p64(state, mds[30..33].try_into().unwrap()));
+    let s11 = reduce_sum(&vec_mul_ff_p64(state, mds[33..36].try_into().unwrap()));
 
     [
         u64x4::from_array([s0, s1, s2, s3]),
@@ -67,77 +67,79 @@ fn apply_mds(state: [u64x4; 3], mds: [u64x4; 36]) -> [u64x4; 3] {
 }
 
 #[inline]
-fn exp_acc(m: usize, base: [u64x4; 3], tail: [u64x4; 3]) -> [u64x4; 3] {
-    let mut res = base;
+fn exp_acc(m: usize, base: &[u64x4; 3], tail: &[u64x4; 3]) -> [u64x4; 3] {
+    let mut res = *base;
 
     for _ in 0..m {
-        res = vec_mul_ff_p64(res, res);
+        res = vec_mul_ff_p64(&res, &res);
     }
 
-    vec_mul_ff_p64(res, tail)
+    vec_mul_ff_p64(&res, tail)
 }
 
 #[inline]
-fn apply_inv_sbox(state: [u64x4; 3]) -> [u64x4; 3] {
+fn apply_inv_sbox(state: &[u64x4; 3]) -> [u64x4; 3] {
     let t1 = vec_mul_ff_p64(state, state);
-    let t2 = vec_mul_ff_p64(t1, t1);
+    let t2 = vec_mul_ff_p64(&t1, &t1);
 
-    let t3 = exp_acc(3, t2, t2);
-    let t4 = exp_acc(6, t3, t3);
-    let t4 = exp_acc(12, t4, t4);
+    let t3 = exp_acc(3, &t2, &t2);
+    let t4 = exp_acc(6, &t3, &t3);
+    let t4 = exp_acc(12, &t4, &t4);
 
-    let t5 = exp_acc(6, t4, t3);
-    let t6 = exp_acc(31, t5, t5);
+    let t5 = exp_acc(6, &t4, &t3);
+    let t6 = exp_acc(31, &t5, &t5);
 
-    let a = vec_mul_ff_p64(vec_mul_ff_p64(t6, t6), t5);
-    let a = vec_mul_ff_p64(a, a);
-    let a = vec_mul_ff_p64(a, a);
-    let b = vec_mul_ff_p64(vec_mul_ff_p64(t1, t2), state);
+    let a = vec_mul_ff_p64(&vec_mul_ff_p64(&t6, &t6), &t5);
+    let a = vec_mul_ff_p64(&a, &a);
+    let a = vec_mul_ff_p64(&a, &a);
+    let b = vec_mul_ff_p64(&vec_mul_ff_p64(&t1, &t2), state);
 
-    vec_mul_ff_p64(a, b)
+    vec_mul_ff_p64(&a, &b)
 }
 
 #[inline]
 fn apply_permutation_round(
-    mut state: [u64x4; 3],
-    mds: [u64x4; 36],
-    ark1: [u64x4; 3],
-    ark2: [u64x4; 3],
+    state: &[u64x4; 3],
+    mds: &[u64x4; 36],
+    ark1: &[u64x4; 3],
+    ark2: &[u64x4; 3],
 ) -> [u64x4; 3] {
-    state = apply_sbox(state);
-    state = apply_mds(state, mds);
-    state = apply_constants(state, ark1);
+    let t0 = apply_sbox(state);
+    let t1 = apply_mds(&t0, mds);
+    let t2 = apply_constants(&t1, ark1);
 
-    state = apply_inv_sbox(state);
-    state = apply_mds(state, mds);
-    state = apply_constants(state, ark2);
+    let t3 = apply_inv_sbox(&t2);
+    let t4 = apply_mds(&t3, mds);
+    let t5 = apply_constants(&t4, ark2);
 
-    state
+    t5
 }
 
 fn apply_rescue_permutation(
-    mut state: [u64x4; 3],
-    mds: [u64x4; 36],
-    ark1: [u64x4; 21],
-    ark2: [u64x4; 21],
+    state: &[u64x4; 3],
+    mds: &[u64x4; 36],
+    ark1: &[u64x4; 21],
+    ark2: &[u64x4; 21],
 ) -> [u64x4; 3] {
+    let mut t = *state;
+
     for i in 0..NUM_ROUNDS {
-        state = apply_permutation_round(
-            state,
+        t = apply_permutation_round(
+            &t,
             mds,
             ark1[i * 3..(i + 1) * 3].try_into().unwrap(),
             ark2[i * 3..(i + 1) * 3].try_into().unwrap(),
         );
     }
 
-    state
+    t
 }
 
 pub fn hash_elements(
     input: &[u64],
-    mds: [u64x4; 36],
-    ark1: [u64x4; 21],
-    ark2: [u64x4; 21],
+    mds: &[u64x4; 36],
+    ark1: &[u64x4; 21],
+    ark2: &[u64x4; 21],
 ) -> [u64; 4] {
     let l = input.len();
     let mut state: [u64x4; 3] = [
@@ -160,26 +162,31 @@ pub fn hash_elements(
 
         i += 4;
         if i % RATE_WIDTH == 0 {
-            state = apply_rescue_permutation(state, mds, ark1, ark2);
+            state = apply_rescue_permutation(&state, mds, ark1, ark2);
             i = 0;
         }
     }
 
     if i > 0 {
-        state = apply_rescue_permutation(state, mds, ark1, ark2);
+        state = apply_rescue_permutation(&state, mds, ark1, ark2);
     }
 
     state[0].to_array()
 }
 
-pub fn merge(input: [u64; 8], mds: [u64x4; 36], ark1: [u64x4; 21], ark2: [u64x4; 21]) -> [u64; 4] {
+pub fn merge(
+    input: &[u64; 8],
+    mds: &[u64x4; 36],
+    ark1: &[u64x4; 21],
+    ark2: &[u64x4; 21],
+) -> [u64; 4] {
     let mut state = [
         u64x4::from_slice(&input[0..4]),
         u64x4::from_slice(&input[4..8]),
         u64x4::from_array([0, 0, 0, RATE_WIDTH as u64]),
     ];
 
-    state = apply_rescue_permutation(state, mds, ark1, ark2);
+    state = apply_rescue_permutation(&state, mds, ark1, ark2);
     state[0].to_array()
 }
 
@@ -195,7 +202,7 @@ mod test {
             u64x4::from_array([1 << 20, 1 << 21, 1 << 22, 1 << 23]),
             u64x4::from_array([1 << 60, 1 << 61, 1 << 62, 1 << 63]),
         ];
-        let res = apply_sbox(state);
+        let res = apply_sbox(&state);
 
         assert_eq!(
             (res[0] % u64x4::splat(MOD)).to_array(),
@@ -233,7 +240,7 @@ mod test {
             u64x4::from_array([1 << 20, 1 << 21, 1 << 22, 1 << 23]),
             u64x4::from_array([1 << 60, 1 << 61, 1 << 62, 1 << 63]),
         ];
-        let res = apply_inv_sbox(state);
+        let res = apply_inv_sbox(&state);
 
         assert_eq!(
             (res[0] % u64x4::splat(MOD)).to_array(),
@@ -269,7 +276,7 @@ mod test {
         let mds = prepare_mds();
         let ark1 = prepare_ark1();
         let ark2 = prepare_ark2();
-        let res = apply_rescue_permutation(state, mds, ark1, ark2);
+        let res = apply_rescue_permutation(&state, &mds, &ark1, &ark2);
 
         assert_eq!(
             (res[0] % u64x4::splat(MOD)).to_array(),
@@ -308,7 +315,7 @@ mod test {
             u64x4::from_array([8, 9, 10, 11]),
         ];
         let mds = prepare_mds();
-        let res = apply_mds(state, mds);
+        let res = apply_mds(&state, &mds);
 
         assert_eq!(
             (res[0] % u64x4::splat(MOD)).to_array(),
@@ -356,8 +363,8 @@ mod test {
         let ark2 = prepare_ark2();
 
         assert_eq!(
-            hash_elements(&state, mds, ark1, ark2),
-            merge(state, mds, ark1, ark2)
+            hash_elements(&state, &mds, &ark1, &ark2),
+            merge(&state, &mds, &ark1, &ark2)
         );
     }
 }

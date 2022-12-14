@@ -46,7 +46,7 @@ fn vec_mul_ff_p64_(a: u64x4, b: u64x4) -> u64x4 {
 }
 
 #[inline]
-pub fn vec_mul_ff_p64(a: [u64x4; 3], b: [u64x4; 3]) -> [u64x4; 3] {
+pub fn vec_mul_ff_p64(a: &[u64x4; 3], b: &[u64x4; 3]) -> [u64x4; 3] {
     [
         vec_mul_ff_p64_(a[0], b[0]),
         vec_mul_ff_p64_(a[1], b[1]),
@@ -72,7 +72,7 @@ pub fn vec_add_ff_p64_(a: u64x4, b: u64x4) -> u64x4 {
 }
 
 #[inline]
-pub fn vec_add_ff_p64(a: [u64x4; 3], b: [u64x4; 3]) -> [u64x4; 3] {
+pub fn vec_add_ff_p64(a: &[u64x4; 3], b: &[u64x4; 3]) -> [u64x4; 3] {
     [
         vec_add_ff_p64_(a[0], b[0]),
         vec_add_ff_p64_(a[1], b[1]),
@@ -99,7 +99,7 @@ mod test {
     #[test]
     fn test_ff_mul_1_() {
         let a = [random_vector(), random_vector(), random_vector()];
-        let b = vec_mul_ff_p64(a, [u64x4::splat(1u64); 3]);
+        let b = vec_mul_ff_p64(&a, &[u64x4::splat(1u64); 3]);
 
         assert_eq!((b[0] % u64x4::splat(MOD)).to_array(), a[0].to_array());
         assert_eq!((b[1] % u64x4::splat(MOD)).to_array(), a[1].to_array());
@@ -122,17 +122,17 @@ mod test {
         let b = [u64x4::from_array([2u64; 4]); 3];
         let c = [u64x4::from_array([4u64; 4]); 3];
 
-        let res_0 = vec_mul_ff_p64(a, a);
+        let res_0 = vec_mul_ff_p64(&a, &a);
         assert_eq!((res_0[0] % u64x4::splat(MOD)).to_array(), [1u64; 4]);
         assert_eq!((res_0[1] % u64x4::splat(MOD)).to_array(), [1u64; 4]);
         assert_eq!((res_0[2] % u64x4::splat(MOD)).to_array(), [1u64; 4]);
 
-        let res_1 = vec_mul_ff_p64(a, b);
+        let res_1 = vec_mul_ff_p64(&a, &b);
         assert_eq!((res_1[0] % u64x4::splat(MOD)).to_array(), [MOD - 2; 4]);
         assert_eq!((res_1[1] % u64x4::splat(MOD)).to_array(), [MOD - 2; 4]);
         assert_eq!((res_1[2] % u64x4::splat(MOD)).to_array(), [MOD - 2; 4]);
 
-        let res_2 = vec_mul_ff_p64(a, c);
+        let res_2 = vec_mul_ff_p64(&a, &c);
         assert_eq!((res_2[0] % u64x4::splat(MOD)).to_array(), [MOD - 4; 4]);
         assert_eq!((res_2[1] % u64x4::splat(MOD)).to_array(), [MOD - 4; 4]);
         assert_eq!((res_2[2] % u64x4::splat(MOD)).to_array(), [MOD - 4; 4]);
@@ -143,7 +143,7 @@ mod test {
         let a = [u64x4::from_array([(MOD + 1) / 2; 4]); 3];
         let b = [u64x4::from_array([2u64; 4]); 3];
 
-        let res = vec_mul_ff_p64(a, b);
+        let res = vec_mul_ff_p64(&a, &b);
         assert_eq!((res[0] % u64x4::splat(MOD)).to_array(), [1u64; 4]);
         assert_eq!((res[1] % u64x4::splat(MOD)).to_array(), [1u64; 4]);
         assert_eq!((res[2] % u64x4::splat(MOD)).to_array(), [1u64; 4]);
@@ -152,7 +152,7 @@ mod test {
     #[test]
     fn test_ff_add_0_() {
         let a = [random_vector(), random_vector(), random_vector()];
-        let res = vec_add_ff_p64(a, [u64x4::splat(0u64); 3]);
+        let res = vec_add_ff_p64(&a, &[u64x4::splat(0u64); 3]);
 
         assert_eq!((res[0] % u64x4::splat(MOD)).to_array(), a[0].to_array());
         assert_eq!((res[1] % u64x4::splat(MOD)).to_array(), a[1].to_array());
@@ -163,7 +163,7 @@ mod test {
     fn test_ff_add_1_() {
         let a = [u64x4::from_array([2u64; 4]); 3];
         let b = [u64x4::from_array([3u64; 4]); 3];
-        let res = vec_add_ff_p64(a, b);
+        let res = vec_add_ff_p64(&a, &b);
 
         assert_eq!((res[0] % u64x4::splat(MOD)).to_array(), [5u64; 4]);
         assert_eq!((res[1] % u64x4::splat(MOD)).to_array(), [5u64; 4]);
@@ -176,12 +176,12 @@ mod test {
         let b = [u64x4::splat(1u64); 3];
         let c: [u64x4; 3] = [u64x4::splat(2u64); 3];
 
-        let res_0 = vec_add_ff_p64(a, b);
+        let res_0 = vec_add_ff_p64(&a, &b);
         assert_eq!((res_0[0] % u64x4::splat(MOD)).to_array(), [0u64; 4]);
         assert_eq!((res_0[1] % u64x4::splat(MOD)).to_array(), [0u64; 4]);
         assert_eq!((res_0[2] % u64x4::splat(MOD)).to_array(), [0u64; 4]);
 
-        let res_1 = vec_add_ff_p64(a, c);
+        let res_1 = vec_add_ff_p64(&a, &c);
         assert_eq!((res_1[0] % u64x4::splat(MOD)).to_array(), [1u64; 4]);
         assert_eq!((res_1[1] % u64x4::splat(MOD)).to_array(), [1u64; 4]);
         assert_eq!((res_1[2] % u64x4::splat(MOD)).to_array(), [1u64; 4]);
@@ -192,7 +192,7 @@ mod test {
         let a = [u64x4::from_array([MOD - 1; 4]); 3];
         let b = [u64x4::from_array([0xffffffffu64; 4]); 3];
 
-        let res = vec_add_ff_p64(a, b);
+        let res = vec_add_ff_p64(&a, &b);
         assert_eq!((res[0] % u64x4::splat(MOD)).to_array(), [0xfffffffeu64; 4]);
         assert_eq!((res[1] % u64x4::splat(MOD)).to_array(), [0xfffffffeu64; 4]);
         assert_eq!((res[2] % u64x4::splat(MOD)).to_array(), [0xfffffffeu64; 4]);
