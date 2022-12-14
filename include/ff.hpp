@@ -2,6 +2,7 @@
 #include <bit>
 #include <cstddef>
 #include <cstdint>
+#include <random>
 
 // Prime Field ( i.e. Z_q ) Arithmetic | q = 2^64 - 2^32 + 1
 namespace ff {
@@ -160,6 +161,16 @@ struct ff_t
   inline constexpr bool operator!=(const ff_t& rhs) const
   {
     return !(*this == rhs);
+  }
+
+  // Generate a random element ∈ Z_q
+  static inline ff_t random()
+  {
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+    std::uniform_int_distribution<uint64_t> dis{ 0ul, Q - 1ul };
+
+    return ff_t{ dis(gen) };
   }
 };
 
