@@ -3,6 +3,7 @@
 #include <bit>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <ostream>
 #include <random>
 
@@ -180,8 +181,20 @@ struct ff_t
   // value is 0.
   //
   // Adapted from
-  // https://github.com/itzmeanjan/ff-gpu/blob/89c9719/ff_p.cpp#L103-L121
-  inline constexpr ff_t inv() const { return *this ^ (Q - 2); }
+  // https://github.com/itzmeanjan/kyber/blob/3cd41a5/include/ff.hpp#L190-L216
+  inline constexpr ff_t inv() const
+  {
+    const bool flg0 = this->v == 0;
+    const uint32_t t0 = this->v + flg0 * 1;
+
+    const auto res = xgcd(t0, Q);
+
+    const bool flg1 = res[0] < 0;
+    const uint64_t t1 = static_cast<uint64_t>(flg1 * Q + res[0]);
+    const uint64_t t2 = t1 - flg0 * 1;
+
+    return ff_t{ t2 };
+  }
 
   // Division over prime field Z_q
   inline constexpr ff_t operator/(const ff_t& rhs) const
