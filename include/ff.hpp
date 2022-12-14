@@ -36,6 +36,23 @@ struct ff_t
 
     return ff_t{ t3 };
   }
+
+  // Negation over prime field, such that both input operand and output are in
+  // canonical form
+  inline constexpr ff_t operator-() const
+  {
+    const uint64_t t = Q - this->v;
+    return ff_t{ t };
+  }
+
+  // Subtraction over prime field, such that both input operands and output are
+  // in canonical
+  // form
+  inline constexpr ff_t operator-(const ff_t& rhs) const
+  {
+    const ff_t t = -rhs;
+    return *this + t;
+  }
 };
 
 }
