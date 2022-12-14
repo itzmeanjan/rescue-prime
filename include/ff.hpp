@@ -2,6 +2,7 @@
 #include <bit>
 #include <cstddef>
 #include <cstdint>
+#include <ostream>
 #include <random>
 
 // Prime Field ( i.e. Z_q ) Arithmetic | q = 2^64 - 2^32 + 1
@@ -172,6 +173,15 @@ struct ff_t
 
     return ff_t{ dis(gen) };
   }
+
+  // Writes an element of Z_q to output stream
+  inline friend std::ostream& operator<<(std::ostream& os, const ff_t& elm);
 };
+
+std::ostream&
+operator<<(std::ostream& os, const ff_t& elm)
+{
+  return os << "Z_q(" << elm.v << ", " << Q << ")";
+}
 
 }
