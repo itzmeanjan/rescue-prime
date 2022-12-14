@@ -1,9 +1,7 @@
 #pragma once
 #include <array>
-#include <bit>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <ostream>
 #include <random>
 
@@ -12,42 +10,6 @@ namespace ff {
 
 // Prime Field Modulus
 constexpr uint64_t Q = 0xffffffff00000001ul;
-
-// Extended GCD algorithm for computing multiplicative inverse of prime ( = Q )
-// field element
-//
-// Taken from
-// https://github.com/itzmeanjan/kyber/blob/3cd41a5/include/ff.hpp#L49-L82
-static constexpr std::array<int64_t, 3>
-xgcd(const uint64_t x, const uint64_t y)
-{
-  int64_t old_r = static_cast<int64_t>(x), r = static_cast<int64_t>(y);
-  int64_t old_s = 1, s = 0;
-  int64_t old_t = 0, t = 1;
-
-  while (r != 0) {
-    const int64_t quotient = old_r / r;
-    int64_t tmp = 0;
-
-    tmp = old_r;
-    old_r = r;
-    r = tmp - quotient * r;
-
-    tmp = old_s;
-    old_s = s;
-    s = tmp - quotient * s;
-
-    tmp = old_t;
-    old_t = t;
-    t = tmp - quotient * t;
-  }
-
-  return {
-    old_s, // a
-    old_t, // b
-    old_r  // g
-  };       // s.t. `ax + by = g`
-}
 
 // An element of prime field Z_q | q = 2^64 - 2^32 + 1, with arithmetic
 // operations defined over it
@@ -101,7 +63,7 @@ struct ff_t
 
   // Multiplication over prime field, such that both input operands and output
   // are in canonical form
-  inline constexpr ff_t operator*(const ff_t& rhs) const
+  inline ff_t operator*(const ff_t& rhs) const
   {
     // Multiply lhs and rhs s.t. high and low 64 -bit limbs of 128 -bit result,
     // becomes accessible
@@ -111,22 +73,25 @@ struct ff_t
     const uint64_t rhs_hi = rhs.v >> 32;
     const uint64_t rhs_lo = rhs.v & 0xfffffffful;
 
-    const uint64_t hi = lhs_hi * rhs_hi;                    // high bits
-    const uint64_t mid = lhs_hi * rhs_lo + lhs_lo * rhs_hi; // mid bits
-    const uint64_t lo = lhs_lo * rhs_lo;                    // low bits
+    const uint64_t hi = lhs_hi * rhs_hi;   // high 64 -bits
+    const uint64_t mid0 = lhs_hi * rhs_lo; // mid 64 -bits ( first component )
+    const uint64_t mid1 = lhs_lo * rhs_hi; // mid 64 -bits ( second component )
+    const uint64_t lo = lhs_lo * rhs_lo;   // low 64 -bits
 
-    const uint64_t mid_hi = mid >> 32;          // high 32 -bits of mid
-    const uint64_t mid_lo = mid & 0xfffffffful; // low 32 -bits of mid
+    const uint64_t mid0_hi = mid0 >> 32;          // high 32 -bits of mid0
+    const uint64_t mid0_lo = mid0 & 0xfffffffful; // low 32 -bits of mid0
+    const uint64_t mid1_hi = mid1 >> 32;          // high 32 -bits of mid1
+    const uint64_t mid1_lo = mid1 & 0xfffffffful; // low 32 -bits of mid1
 
     const uint64_t t0 = lo >> 32;
-    const uint64_t t1 = t0 + mid_lo;
+    const uint64_t t1 = t0 + mid0_lo + mid1_lo;
     const uint64_t carry = t1 >> 32;
 
     // res = lhs * rhs | res is a 128 -bit number
     //
     // assert res = (res_hi << 64) | res_lo
-    const uint64_t res_hi = hi + mid_hi + carry;
-    const uint64_t res_lo = lo + (mid_lo << 32);
+    const uint64_t res_hi = hi + mid0_hi + mid1_hi + carry;
+    const uint64_t res_lo = lo + (mid0_lo << 32) + (mid1_lo << 32);
 
     const uint64_t c = res_hi & 0xfffffffful;
     const uint64_t d = res_hi >> 32;
@@ -145,27 +110,23 @@ struct ff_t
     return ff_t{ t8 };
   }
 
-  // Raises an element of Z_q to N -th power, over prime field, using
-  // exponentiation by repeated squaring rule. Note, both input element and
-  // output elements are kept in their canonical form.
+  // Raises an element of Z_q to N -th power ( which is a 64 -bit unsigned
+  // integer ), over prime field, using exponentiation by repeated squaring
+  // rule. Note, both input element and output elements are kept in their
+  // canonical form.
   //
   // Adapted from
-  // https://github.com/itzmeanjan/kyber/blob/3cd41a5/include/ff.hpp#L224-L246
+  // https://github.com/itzmeanjan/secp256k1/blob/6e5e654/field/scalar_field.py#L117-L127
   inline constexpr ff_t operator^(const size_t n) const
   {
-    ff_t base = *this;
+    const ff_t br[]{ ff_t::one(), *this };
+    ff_t res = ff_t::one();
 
-    const ff_t br[]{ ff_t::one(), base };
-    ff_t res = br[n & 0b1ul];
+    for (size_t i = 0; i < 64; i++) {
+      res = res * res;
 
-    const size_t zeros = std::countl_zero(n);
-    const size_t till = 64ul - zeros;
-
-    for (size_t i = 1; i < till; i++) {
-      base = base * base;
-
-      const ff_t br[]{ ff_t::one(), base };
-      res = res * br[(n >> i) & 0b1ul];
+      const size_t bidx = 63 - i;
+      res = res * br[(n >> bidx) & 0b1ul];
     }
 
     return res;
@@ -182,25 +143,10 @@ struct ff_t
   //
   // Adapted from
   // https://github.com/itzmeanjan/kyber/blob/3cd41a5/include/ff.hpp#L190-L216
-  inline constexpr ff_t inv() const
-  {
-    const bool flg0 = this->v == 0;
-    const uint32_t t0 = this->v + flg0 * 1;
-
-    const auto res = xgcd(t0, Q);
-
-    const bool flg1 = res[0] < 0;
-    const uint64_t t1 = static_cast<uint64_t>(flg1 * Q + res[0]);
-    const uint64_t t2 = t1 - flg0 * 1;
-
-    return ff_t{ t2 };
-  }
+  inline ff_t inv() const { return *this ^ (Q - 2); }
 
   // Division over prime field Z_q
-  inline constexpr ff_t operator/(const ff_t& rhs) const
-  {
-    return (*this) * rhs.inv();
-  }
+  inline ff_t operator/(const ff_t& rhs) const { return (*this) * rhs.inv(); }
 
   // Check equality of canonical values of two elements ∈ Z_q
   inline constexpr bool operator==(const ff_t& rhs) const
