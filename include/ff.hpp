@@ -1,4 +1,6 @@
 #pragma once
+#include <bit>
+#include <cstddef>
 #include <cstdint>
 
 // Prime Field ( i.e. Z_q ) Arithmetic | q = 2^64 - 2^32 + 1
@@ -101,6 +103,32 @@ struct ff_t
     const uint64_t t8 = t6 + t7;
 
     return ff_t{ t8 };
+  }
+
+  // Raises an element of Z_q to N -th power, using exponentiation by repeated
+  // squaring rule. Note, both input element and output elements are kept in
+  // their canonical form.
+  //
+  // Taken from
+  // https://github.com/itzmeanjan/kyber/blob/3cd41a5/include/ff.hpp#L224-L246
+  constexpr ff_t operator^(const size_t n) const
+  {
+    ff_t base = *this;
+
+    const ff_t br[]{ ff_t::one(), base };
+    ff_t res = br[n & 0b1ul];
+
+    const size_t zeros = std::countl_zero(n);
+    const size_t till = 64ul - zeros;
+
+    for (size_t i = 1; i < till; i++) {
+      base = base * base;
+
+      const ff_t br[]{ ff_t::one(), base };
+      res = res * br[(n >> i) & 0b1ul];
+    }
+
+    return res;
   }
 };
 
