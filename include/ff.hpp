@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <bit>
 #include <cstddef>
 #include <cstdint>
@@ -10,6 +11,42 @@ namespace ff {
 
 // Prime Field Modulus
 constexpr uint64_t Q = 0xffffffff00000001ul;
+
+// Extended GCD algorithm for computing multiplicative inverse of prime ( = Q )
+// field element
+//
+// Taken from
+// https://github.com/itzmeanjan/kyber/blob/3cd41a5/include/ff.hpp#L49-L82
+static constexpr std::array<int64_t, 3>
+xgcd(const uint64_t x, const uint64_t y)
+{
+  int64_t old_r = static_cast<int64_t>(x), r = static_cast<int64_t>(y);
+  int64_t old_s = 1, s = 0;
+  int64_t old_t = 0, t = 1;
+
+  while (r != 0) {
+    const int64_t quotient = old_r / r;
+    int64_t tmp = 0;
+
+    tmp = old_r;
+    old_r = r;
+    r = tmp - quotient * r;
+
+    tmp = old_s;
+    old_s = s;
+    s = tmp - quotient * s;
+
+    tmp = old_t;
+    old_t = t;
+    t = tmp - quotient * t;
+  }
+
+  return {
+    old_s, // a
+    old_t, // b
+    old_r  // g
+  };       // s.t. `ax + by = g`
+}
 
 // An element of prime field Z_q | q = 2^64 - 2^32 + 1, with arithmetic
 // operations defined over it
