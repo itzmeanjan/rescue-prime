@@ -56,12 +56,9 @@ pub fn vec_mul_ff_p64(a: [u64x4; 3], b: [u64x4; 3]) -> [u64x4; 3] {
 
 #[inline]
 pub fn vec_add_ff_p64_(a: u64x4, b: u64x4) -> u64x4 {
-    // replaced call to `to_canonical` ( more https://github.com/itzmeanjan/simd-rescue-prime/blob/46d9e8b/src/ff.rs#L62-L69 )
-    // with following modulo division operation
-    //
-    // suggested here https://github.com/rust-lang/portable-simd/issues/215#issuecomment-997106309
-    // for exploration purposes
-    let b_ok = b % u64x4::splat(MOD);
+    let t0 = b.simd_ge(u64x4::splat(MOD));
+    let t1 = b - u64x4::splat(MOD);
+    let b_ok = t0.select(t1, b);
 
     let tmp0 = a + b_ok;
     let over0 = a.simd_gt(u64x4::splat(ULONG_MAX) - b_ok);
