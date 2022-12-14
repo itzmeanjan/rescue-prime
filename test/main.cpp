@@ -4,7 +4,7 @@
 int
 main()
 {
-  test_rphash::test_field_ops();
+  test_rphash::test_field_ops<4096>();
   std::cout << "[test] Rescue Prime field arithmetic\n";
 
   return EXIT_SUCCESS;
