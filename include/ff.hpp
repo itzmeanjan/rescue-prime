@@ -145,9 +145,21 @@ struct ff_t
   inline constexpr ff_t inv() const { return *this ^ (Q - 2); }
 
   // Division over prime field Z_q
-  constexpr ff_t operator/(const ff_t& rhs) const
+  inline constexpr ff_t operator/(const ff_t& rhs) const
   {
     return (*this) * rhs.inv();
+  }
+
+  // Check equality of canonical values of two elements ∈ Z_q
+  inline constexpr bool operator==(const ff_t& rhs) const
+  {
+    return !static_cast<bool>(this->v ^ rhs.v);
+  }
+
+  // Check inequality of canonical values of two elements ∈ Z_q
+  inline constexpr bool operator!=(const ff_t& rhs) const
+  {
+    return !(*this == rhs);
   }
 };
 
