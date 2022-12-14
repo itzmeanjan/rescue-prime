@@ -4,43 +4,51 @@ pub const ULONG_MAX: u64 = 0xffffffffffffffff;
 pub const UINT_MAX: u64 = 0xffffffff;
 pub const MOD: u64 = 0xffffffff00000001;
 
-#[inline]
+#[inline(always)]
 fn mul_hi_(a: u64x4, b: u64x4) -> u64x4 {
-    let a_lo = a & u64x4::splat(UINT_MAX);
-    let a_hi = a >> u64x4::splat(32u64);
-    let b_lo = b & u64x4::splat(UINT_MAX);
-    let b_hi = b >> u64x4::splat(32u64);
+    let u32max = u64x4::splat(UINT_MAX);
+    let lane32 = u64x4::splat(32u64);
+
+    let a_lo = a & u32max;
+    let a_hi = a >> lane32;
+    let b_lo = b & u32max;
+    let b_hi = b >> lane32;
 
     let a_x_b_hi = a_hi * b_hi;
     let a_x_b_mid = a_hi * b_lo;
     let b_x_a_mid = b_hi * a_lo;
     let a_x_b_lo = a_lo * b_lo;
 
-    let tmp0 = a_x_b_mid & u64x4::splat(UINT_MAX);
-    let tmp1 = b_x_a_mid & u64x4::splat(UINT_MAX);
-    let tmp2 = tmp0 + tmp1 + (a_x_b_lo >> u64x4::splat(32u64));
-    let carry_bit = tmp2 >> u64x4::splat(32u64);
+    let tmp0 = a_x_b_mid & u32max;
+    let tmp1 = b_x_a_mid & u32max;
+    let tmp2 = tmp0 + tmp1 + (a_x_b_lo >> lane32);
+    let carry_bit = tmp2 >> lane32;
 
-    a_x_b_hi + (a_x_b_mid >> u64x4::splat(32u64)) + (b_x_a_mid >> u64x4::splat(32u64)) + carry_bit
+    a_x_b_hi + (a_x_b_mid >> lane32) + (b_x_a_mid >> lane32) + carry_bit
 }
 
-#[inline]
+#[inline(always)]
 fn vec_mul_ff_p64_(a: u64x4, b: u64x4) -> u64x4 {
+    let u32max = u64x4::splat(UINT_MAX);
+    let u64max = u64x4::splat(ULONG_MAX);
+    let lane32 = u64x4::splat(32u64);
+    let zeros = u64x4::splat(0u64);
+
     let ab = a * b;
     let cd = mul_hi_(a, b);
-    let c = cd & u64x4::splat(UINT_MAX);
-    let d = cd >> u64x4::splat(32u64);
+    let c = cd & u32max;
+    let d = cd >> lane32;
 
     let tmp0 = ab - d;
     let under0 = ab.simd_lt(d);
-    let tmp1 = under0.select(u64x4::splat(1u64), u64x4::splat(0u64)) * u64x4::splat(UINT_MAX);
+    let tmp1 = under0.select(u32max, zeros);
     let tmp2 = tmp0 - tmp1;
 
-    let tmp3 = (c << u64x4::splat(32u64)) - c;
+    let tmp3 = (c << lane32) - c;
 
     let tmp4 = tmp2 + tmp3;
-    let over0 = tmp2.simd_gt(u64x4::splat(ULONG_MAX) - tmp3);
-    let tmp5 = over0.select(u64x4::splat(1u64), u64x4::splat(0u64)) * u64x4::splat(UINT_MAX);
+    let over0 = tmp2.simd_gt(u64max - tmp3);
+    let tmp5 = over0.select(u32max, zeros);
 
     tmp4 + tmp5
 }
@@ -54,19 +62,24 @@ pub fn vec_mul_ff_p64(a: &[u64x4; 3], b: &[u64x4; 3]) -> [u64x4; 3] {
     ]
 }
 
-#[inline]
+#[inline(always)]
 pub fn vec_add_ff_p64_(a: u64x4, b: u64x4) -> u64x4 {
-    let t0 = b.simd_ge(u64x4::splat(MOD));
-    let t1 = b - u64x4::splat(MOD);
+    let vmod = u64x4::splat(MOD);
+    let u32max = u64x4::splat(UINT_MAX);
+    let u64max = u64x4::splat(ULONG_MAX);
+    let zeros = u64x4::splat(0u64);
+
+    let t0 = b.simd_ge(vmod);
+    let t1 = b - vmod;
     let b_ok = t0.select(t1, b);
 
     let tmp0 = a + b_ok;
-    let over0 = a.simd_gt(u64x4::splat(ULONG_MAX) - b_ok);
-    let tmp1 = over0.select(u64x4::splat(1u64), u64x4::splat(0u64)) * u64x4::splat(UINT_MAX);
+    let over0 = a.simd_gt(u64max - b_ok);
+    let tmp1 = over0.select(u32max, zeros);
 
     let tmp2 = tmp0 + tmp1;
-    let over1 = tmp0.simd_gt(u64x4::splat(ULONG_MAX) - tmp1);
-    let tmp3 = over1.select(u64x4::splat(1u64), u64x4::splat(0u64)) * u64x4::splat(UINT_MAX);
+    let over1 = tmp0.simd_gt(u64max - tmp1);
+    let tmp3 = over1.select(u32max, zeros);
 
     tmp2 + tmp3
 }
