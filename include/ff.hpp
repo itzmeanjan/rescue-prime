@@ -143,6 +143,12 @@ struct ff_t
   // Adapted from
   // https://github.com/itzmeanjan/ff-gpu/blob/89c9719/ff_p.cpp#L103-L121
   inline constexpr ff_t inv() const { return *this ^ (Q - 2); }
+
+  // Division over prime field Z_q
+  constexpr ff_t operator/(const ff_t& rhs) const
+  {
+    return (*this) * rhs.inv();
+  }
 };
 
 }
