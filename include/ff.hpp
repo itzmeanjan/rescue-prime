@@ -61,7 +61,7 @@ struct ff_t
 
   // Multiplication over prime field, such that both input operands and output
   // are in canonical form
-  constexpr ff_t operator*(const ff_t& rhs) const
+  inline constexpr ff_t operator*(const ff_t& rhs) const
   {
     // Multiply lhs and rhs s.t. high and low 64 -bit limbs of 128 -bit result,
     // becomes accessible
@@ -105,13 +105,13 @@ struct ff_t
     return ff_t{ t8 };
   }
 
-  // Raises an element of Z_q to N -th power, using exponentiation by repeated
-  // squaring rule. Note, both input element and output elements are kept in
-  // their canonical form.
+  // Raises an element of Z_q to N -th power, over prime field, using
+  // exponentiation by repeated squaring rule. Note, both input element and
+  // output elements are kept in their canonical form.
   //
-  // Taken from
+  // Adapted from
   // https://github.com/itzmeanjan/kyber/blob/3cd41a5/include/ff.hpp#L224-L246
-  constexpr ff_t operator^(const size_t n) const
+  inline constexpr ff_t operator^(const size_t n) const
   {
     ff_t base = *this;
 
@@ -130,6 +130,19 @@ struct ff_t
 
     return res;
   }
+
+  // Multiplicative inverse over prime field
+  //
+  // Say input is a & return value of this function is b, then
+  //
+  // assert (a * b) % q == 1
+  //
+  // When input a = 0, multiplicative inverse can't be computed, hence return
+  // value is 0.
+  //
+  // Adapted from
+  // https://github.com/itzmeanjan/ff-gpu/blob/89c9719/ff_p.cpp#L103-L121
+  inline constexpr ff_t inv() const { return *this ^ (Q - 2); }
 };
 
 }
