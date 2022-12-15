@@ -205,6 +205,28 @@ exp7(const ff::ff_t v)
   return v7;
 }
 
+// Taken from
+// https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/mod.rs#L17-L25,
+// to perform cheaper exponentiation
+template<const size_t m>
+static inline void
+exp_acc(const ff::ff_t* const base,
+        const ff::ff_t* const tail,
+        ff::ff_t* const __restrict res)
+{
+  std::memcpy(res, base, sizeof(ff::ff_t) * STATE_WIDTH);
+
+  for (size_t i = 0; i < m; i++) {
+    for (size_t j = 0; j < STATE_WIDTH; j++) {
+      res[j] = res[j] * res[j];
+    }
+  }
+
+  for (size_t i = 0; i < STATE_WIDTH; i++) {
+    res[i] = res[i] * tail[i];
+  }
+}
+
 // Applies substitution box on Rescue permutation state, by raising each element
 // to its 7-th power.
 static inline void
@@ -216,12 +238,49 @@ apply_sbox(ff::ff_t* const state)
 }
 
 // Applies inverse substitution box on Rescue permutation state, by raising each
-// element to its 10540996611094048183-th power.
+// element to its 10540996611094048183-th power, with lesser many
+// multiplications.
+//
+// Adapted from
+// https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/rp64_256/mod.rs#L335-L369
 static inline void
 apply_inv_sbox(ff::ff_t* const state)
 {
+  ff::ff_t t1[STATE_WIDTH];
   for (size_t i = 0; i < STATE_WIDTH; i++) {
-    state[i] = state[i] ^ INV_ALPHA;
+    t1[i] = state[i] * state[i];
+  }
+
+  ff::ff_t t2[STATE_WIDTH];
+  for (size_t i = 0; i < STATE_WIDTH; i++) {
+    t2[i] = t1[i] * t1[i];
+  }
+
+  ff::ff_t t3[STATE_WIDTH];
+  exp_acc<3>(t2, t2, t3);
+
+  ff::ff_t t4[STATE_WIDTH];
+  exp_acc<6>(t3, t3, t4);
+
+  ff::ff_t t5[STATE_WIDTH];
+  exp_acc<12>(t4, t4, t5);
+
+  ff::ff_t t6[STATE_WIDTH];
+  exp_acc<6>(t5, t3, t6);
+
+  ff::ff_t t7[STATE_WIDTH];
+  exp_acc<31>(t6, t6, t7);
+
+  for (size_t i = 0; i < STATE_WIDTH; i++) {
+    const auto a0 = t7[i] * t7[i];
+    const auto a1 = a0 * t6[i];
+    const auto a2 = a1 * a1;
+    const auto a3 = a2 * a2;
+
+    const auto b0 = t1[i] * t2[i];
+    const auto b1 = b0 * state[i];
+
+    state[i] = a3 * b1;
   }
 }
 
