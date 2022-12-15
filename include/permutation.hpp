@@ -217,11 +217,22 @@ exp_acc(const ff::ff_t* const base,
   std::memcpy(res, base, sizeof(ff::ff_t) * STATE_WIDTH);
 
   for (size_t i = 0; i < m; i++) {
+
+#if defined __GNUC__
+#pragma GCC unroll 12
+#elif defined __clang__
+#pragma unroll 12
+#endif
     for (size_t j = 0; j < STATE_WIDTH; j++) {
       res[j] = res[j] * res[j];
     }
   }
 
+#if defined __GNUC__
+#pragma GCC unroll 12
+#elif defined __clang__
+#pragma unroll 12
+#endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     res[i] = res[i] * tail[i];
   }
@@ -232,6 +243,11 @@ exp_acc(const ff::ff_t* const base,
 static inline void
 apply_sbox(ff::ff_t* const state)
 {
+#if defined __GNUC__
+#pragma GCC unroll 12
+#elif defined __clang__
+#pragma unroll 12
+#endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] = exp7(state[i]);
   }
@@ -247,11 +263,23 @@ static inline void
 apply_inv_sbox(ff::ff_t* const state)
 {
   ff::ff_t t1[STATE_WIDTH];
+
+#if defined __GNUC__
+#pragma GCC unroll 12
+#elif defined __clang__
+#pragma unroll 12
+#endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     t1[i] = state[i] * state[i];
   }
 
   ff::ff_t t2[STATE_WIDTH];
+
+#if defined __GNUC__
+#pragma GCC unroll 12
+#elif defined __clang__
+#pragma unroll 12
+#endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     t2[i] = t1[i] * t1[i];
   }
@@ -271,6 +299,11 @@ apply_inv_sbox(ff::ff_t* const state)
   ff::ff_t t7[STATE_WIDTH];
   exp_acc<31>(t6, t6, t7);
 
+#if defined __GNUC__
+#pragma GCC unroll 12
+#elif defined __clang__
+#pragma unroll 12
+#endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     const auto a0 = t7[i] * t7[i];
     const auto a1 = a0 * t6[i];
@@ -292,6 +325,11 @@ add_rc0(ff::ff_t* const state, const size_t ridx)
 {
   const size_t rc_off = ridx * STATE_WIDTH;
 
+#if defined __GNUC__
+#pragma GCC unroll 12
+#elif defined __clang__
+#pragma unroll 12
+#endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] = state[i] + RC0[rc_off + i];
   }
@@ -305,6 +343,11 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
 {
   const size_t rc_off = ridx * STATE_WIDTH;
 
+#if defined __GNUC__
+#pragma GCC unroll 12
+#elif defined __clang__
+#pragma unroll 12
+#endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] = state[i] + RC1[rc_off + i];
   }
@@ -319,6 +362,11 @@ apply_mds(ff::ff_t* const state)
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     const size_t off = i * STATE_WIDTH;
 
+#if defined __GNUC__
+#pragma GCC unroll 12
+#elif defined __clang__
+#pragma unroll 12
+#endif
     for (size_t j = 0; j < STATE_WIDTH; j++) {
       tmp[i] = tmp[i] + state[j] * MDS[off + j];
     }
