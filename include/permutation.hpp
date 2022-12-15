@@ -180,4 +180,20 @@ constexpr ff::ff_t RC1[ROUNDS * STATE_WIDTH]{
   12717309295554119359ul, 4130723396860574906ul,  7706153020203677238ul,
 };
 
+// Raise an element ∈ Z_q to its 7-th power, by using less multiplications, than
+// one would do if done using exponentiation routine.
+//
+// Adapted from
+// https://github.com/novifinancial/winterfell/blob/437dc08/math/src/field/f64/mod.rs#L74-L82
+inline constexpr ff::ff_t
+exp7(const ff::ff_t v)
+{
+  const ff::ff_t v2 = v * v;
+  const ff::ff_t v4 = v2 * v2;
+  const ff::ff_t v6 = v2 * v4;
+  const ff::ff_t v7 = v * v6;
+
+  return v7;
+}
+
 }
