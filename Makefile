@@ -16,3 +16,11 @@ clean:
 
 format:
 	find . -name '*.hpp' -o -name '*.cpp' -o -name '*.hpp' | xargs clang-format -i --style=Mozilla
+
+bench/a.out: bench/main.cpp include/*.hpp include/bench/*.hpp
+	# make sure you've google-benchmark globally installed;
+	# see https://github.com/google/benchmark/tree/da652a7#installation
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(IFLAGS) $< -lbenchmark -o $@
+
+benchmark: bench/a.out
+	./$< --benchmark_time_unit=ns --benchmark_counters_tabular=true
