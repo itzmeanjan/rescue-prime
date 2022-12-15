@@ -181,11 +181,11 @@ constexpr ff::ff_t RC1[ROUNDS * STATE_WIDTH]{
 };
 
 // Raise an element ∈ Z_q to its 7-th power, by using less multiplications, than
-// one would do if done using exponentiation routine.
+// one would do if done using standard exponentiation routine.
 //
 // Adapted from
 // https://github.com/novifinancial/winterfell/blob/437dc08/math/src/field/f64/mod.rs#L74-L82
-inline constexpr ff::ff_t
+static inline ff::ff_t
 exp7(const ff::ff_t v)
 {
   const ff::ff_t v2 = v * v;
@@ -194,6 +194,16 @@ exp7(const ff::ff_t v)
   const ff::ff_t v7 = v * v6;
 
   return v7;
+}
+
+// Applies substitution box on Rescue permutation state, by raising each element
+// to its 7-th power.
+static inline void
+apply_sbox(ff::ff_t* const state)
+{
+  for (size_t i = 0; i < STATE_WIDTH; i++) {
+    state[i] = exp7(state[i]);
+  }
 }
 
 }
