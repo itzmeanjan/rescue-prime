@@ -268,4 +268,19 @@ apply_mds(ff::ff_t* const state)
   std::memcpy(state, tmp, sizeof(tmp));
 }
 
+// Apply single Rescue permutation round
+static inline void
+apply_round(ff::ff_t* const state, const size_t ridx)
+{
+  // first half
+  apply_sbox(state);
+  apply_mds(state);
+  add_rc0(state, ridx);
+
+  // second half
+  apply_inv_sbox(state);
+  apply_mds(state);
+  add_rc1(state, ridx);
+}
+
 }
