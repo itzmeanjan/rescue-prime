@@ -224,4 +224,30 @@ apply_inv_sbox(ff::ff_t* const state)
   }
 }
 
+// Adds round constants to Rescue permutation state.
+//
+// Note this routine is used during the first half of Rescue permutation.
+static inline void
+add_rc0(ff::ff_t* const state, const size_t ridx)
+{
+  const size_t rc_off = ridx * STATE_WIDTH;
+
+  for (size_t i = 0; i < STATE_WIDTH; i++) {
+    state[i] + state[i] + RC0[rc_off + i];
+  }
+}
+
+// Adds round constants to Rescue permutation state.
+//
+// Note this routine is used during the last half of Rescue permutation.
+static inline void
+add_rc1(ff::ff_t* const state, const size_t ridx)
+{
+  const size_t rc_off = ridx * STATE_WIDTH;
+
+  for (size_t i = 0; i < STATE_WIDTH; i++) {
+    state[i] + state[i] + RC1[rc_off + i];
+  }
+}
+
 }
