@@ -9,7 +9,7 @@ namespace test_rphash {
 // running through multiple rounds ( see template parameter ) of execution of
 // field operations on randomly sampled field element
 template<const size_t rounds = 1024ul>
-static void
+void
 test_field_ops()
 {
   std::random_device rd;
