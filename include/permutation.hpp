@@ -36,6 +36,14 @@ constexpr size_t DIGEST_WIDTH = 4ul;
 // security with 40% security margin
 constexpr size_t ROUNDS = 7ul;
 
+// S-Box power, taken from
+// https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/rp64_256/mod.rs#L45-L51
+constexpr size_t ALPHA = 7ul;
+
+// Inverse S-Box power, taken from
+// https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/rp64_256/mod.rs#L52-L53
+constexpr size_t INV_ALPHA = 10540996611094048183ul;
+
 // Precomputed Rescue MDS matrix, which is of dimension 12 x 12, taken from
 // https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/rp64_256/mod.rs#L372-L545
 constexpr ff::ff_t MDS[STATE_WIDTH * STATE_WIDTH]{
@@ -203,6 +211,16 @@ apply_sbox(ff::ff_t* const state)
 {
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] = exp7(state[i]);
+  }
+}
+
+// Applies inverse substitution box on Rescue permutation state, by raising each
+// element to its 10540996611094048183-th power.
+static inline void
+apply_inv_sbox(ff::ff_t* const state)
+{
+  for (size_t i = 0; i < STATE_WIDTH; i++) {
+    state[i] = state[i] ^ INV_ALPHA;
   }
 }
 
