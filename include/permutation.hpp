@@ -283,4 +283,13 @@ apply_round(ff::ff_t* const state, const size_t ridx)
   add_rc1(state, ridx);
 }
 
+// Rescue Permutation of 7 rounds
+static inline void
+permute(ff::ff_t* const state)
+{
+  for (size_t i = 0; i < ROUNDS; i++) {
+    apply_round(state, i);
+  }
+}
+
 }
