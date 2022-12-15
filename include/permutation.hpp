@@ -1,5 +1,6 @@
 #pragma once
 #include "ff.hpp"
+#include <cstring>
 
 // Rescue Permutation over prime field Z_q, q = 2^64 - 2^32 + 1
 //
@@ -248,6 +249,23 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] + state[i] + RC1[rc_off + i];
   }
+}
+
+// Multiplies Rescue permutation state by MDS matrix
+static inline void
+apply_mds(ff::ff_t* const state)
+{
+  ff::ff_t tmp[STATE_WIDTH]{};
+
+  for (size_t i = 0; i < STATE_WIDTH; i++) {
+    const size_t off = i * STATE_WIDTH;
+
+    for (size_t j = 0; j < STATE_WIDTH; j++) {
+      tmp[i] = tmp[i] + state[i] * MDS[off + j];
+    }
+  }
+
+  std::memcpy(state, tmp, sizeof(tmp));
 }
 
 }
