@@ -1,6 +1,5 @@
 #pragma once
 #include "bench_common.hpp"
-#include "benchmark/benchmark.h"
 #include "permutation.hpp"
 
 // Benchmark Rescue Prime hash and its components, using google-benchmark
