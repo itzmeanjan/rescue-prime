@@ -234,7 +234,7 @@ add_rc0(ff::ff_t* const state, const size_t ridx)
   const size_t rc_off = ridx * STATE_WIDTH;
 
   for (size_t i = 0; i < STATE_WIDTH; i++) {
-    state[i] + state[i] + RC0[rc_off + i];
+    state[i] = state[i] + RC0[rc_off + i];
   }
 }
 
@@ -247,7 +247,7 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
   const size_t rc_off = ridx * STATE_WIDTH;
 
   for (size_t i = 0; i < STATE_WIDTH; i++) {
-    state[i] + state[i] + RC1[rc_off + i];
+    state[i] = state[i] + RC1[rc_off + i];
   }
 }
 
@@ -261,7 +261,7 @@ apply_mds(ff::ff_t* const state)
     const size_t off = i * STATE_WIDTH;
 
     for (size_t j = 0; j < STATE_WIDTH; j++) {
-      tmp[i] = tmp[i] + state[i] * MDS[off + j];
+      tmp[i] = tmp[i] + state[j] * MDS[off + j];
     }
   }
 
