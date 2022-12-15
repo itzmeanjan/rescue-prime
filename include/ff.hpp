@@ -4,12 +4,50 @@
 #include <cstdint>
 #include <ostream>
 #include <random>
+#include <utility>
 
 // Prime Field ( i.e. Z_q ) Arithmetic | q = 2^64 - 2^32 + 1
 namespace ff {
 
 // Prime Field Modulus
 constexpr uint64_t Q = 0xffffffff00000001ul;
+
+// Given two 64 -bit unsigned integer operands, this routine multiplies them
+// such that high and low 64 -bit limbs of 128 -bit result in accessible.
+//
+// Note, returned pair holds high 64 -bits of result first and then remaining
+// low 64 -bits are kept.
+inline constexpr std::pair<uint64_t, uint64_t>
+full_mul_u64(const uint64_t lhs, const uint64_t rhs)
+{
+  const uint64_t lhs_hi = lhs >> 32;
+  const uint64_t lhs_lo = lhs & 0xfffffffful;
+
+  const uint64_t rhs_hi = rhs >> 32;
+  const uint64_t rhs_lo = rhs & 0xfffffffful;
+
+  const uint64_t hi = lhs_hi * rhs_hi;   // high 64 -bits
+  const uint64_t mid0 = lhs_hi * rhs_lo; // mid 64 -bits ( first component )
+  const uint64_t mid1 = lhs_lo * rhs_hi; // mid 64 -bits ( second component )
+  const uint64_t lo = lhs_lo * rhs_lo;   // low 64 -bits
+
+  const uint64_t mid0_hi = mid0 >> 32;          // high 32 -bits of mid0
+  const uint64_t mid0_lo = mid0 & 0xfffffffful; // low 32 -bits of mid0
+  const uint64_t mid1_hi = mid1 >> 32;          // high 32 -bits of mid1
+  const uint64_t mid1_lo = mid1 & 0xfffffffful; // low 32 -bits of mid1
+
+  const uint64_t t0 = lo >> 32;
+  const uint64_t t1 = t0 + mid0_lo + mid1_lo;
+  const uint64_t carry = t1 >> 32;
+
+  // res = lhs * rhs | res is a 128 -bit number
+  //
+  // assert res = (res_hi << 64) | res_lo
+  const uint64_t res_hi = hi + mid0_hi + mid1_hi + carry;
+  const uint64_t res_lo = lo + (mid0_lo << 32) + (mid1_lo << 32);
+
+  return std::make_pair(res_hi, res_lo);
+}
 
 // An element of prime field Z_q | q = 2^64 - 2^32 + 1, with arithmetic
 // operations defined over it
@@ -65,33 +103,9 @@ struct ff_t
   // are in canonical form
   inline ff_t operator*(const ff_t& rhs) const
   {
-    // Multiply lhs and rhs s.t. high and low 64 -bit limbs of 128 -bit result,
-    // becomes accessible
-    const uint64_t lhs_hi = this->v >> 32;
-    const uint64_t lhs_lo = this->v & 0xfffffffful;
-
-    const uint64_t rhs_hi = rhs.v >> 32;
-    const uint64_t rhs_lo = rhs.v & 0xfffffffful;
-
-    const uint64_t hi = lhs_hi * rhs_hi;   // high 64 -bits
-    const uint64_t mid0 = lhs_hi * rhs_lo; // mid 64 -bits ( first component )
-    const uint64_t mid1 = lhs_lo * rhs_hi; // mid 64 -bits ( second component )
-    const uint64_t lo = lhs_lo * rhs_lo;   // low 64 -bits
-
-    const uint64_t mid0_hi = mid0 >> 32;          // high 32 -bits of mid0
-    const uint64_t mid0_lo = mid0 & 0xfffffffful; // low 32 -bits of mid0
-    const uint64_t mid1_hi = mid1 >> 32;          // high 32 -bits of mid1
-    const uint64_t mid1_lo = mid1 & 0xfffffffful; // low 32 -bits of mid1
-
-    const uint64_t t0 = lo >> 32;
-    const uint64_t t1 = t0 + mid0_lo + mid1_lo;
-    const uint64_t carry = t1 >> 32;
-
-    // res = lhs * rhs | res is a 128 -bit number
-    //
-    // assert res = (res_hi << 64) | res_lo
-    const uint64_t res_hi = hi + mid0_hi + mid1_hi + carry;
-    const uint64_t res_lo = lo + (mid0_lo << 32) + (mid1_lo << 32);
+    const auto res = full_mul_u64(this->v, rhs.v);
+    const uint64_t res_hi = res.first;
+    const uint64_t res_lo = res.second;
 
     const uint64_t c = res_hi & 0xfffffffful;
     const uint64_t d = res_hi >> 32;
