@@ -101,7 +101,7 @@ struct ff_t
 
   // Multiplication over prime field, such that both input operands and output
   // are in canonical form
-  inline ff_t operator*(const ff_t& rhs) const
+  inline constexpr ff_t operator*(const ff_t& rhs) const
   {
     const auto res = full_mul_u64(this->v, rhs.v);
     const uint64_t res_hi = res.first;
@@ -157,10 +157,13 @@ struct ff_t
   //
   // Adapted from
   // https://github.com/itzmeanjan/kyber/blob/3cd41a5/include/ff.hpp#L190-L216
-  inline ff_t inv() const { return *this ^ (Q - 2); }
+  inline constexpr ff_t inv() const { return *this ^ (Q - 2); }
 
   // Division over prime field Z_q
-  inline ff_t operator/(const ff_t& rhs) const { return (*this) * rhs.inv(); }
+  inline constexpr ff_t operator/(const ff_t& rhs) const
+  {
+    return (*this) * rhs.inv();
+  }
 
   // Check equality of canonical values of two elements ∈ Z_q
   inline constexpr bool operator==(const ff_t& rhs) const
