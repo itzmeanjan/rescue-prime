@@ -1,7 +1,5 @@
 #pragma once
-#include "ff.hpp"
 #include "permutation.hpp"
-#include <cstring>
 
 // Rescue Prime Hashing over prime field Z_q, q = 2^64 - 2^32 + 1
 namespace rescue_prime {
