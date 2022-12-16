@@ -5,8 +5,15 @@
 int
 main()
 {
-  test_rphash::test_field_ops<4096>();
+  test_rphash::test_field_ops();
   std::cout << "[test] Rescue Prime field arithmetic\n";
+
+#if defined __AVX2__
+
+  test_rphash::test_avx_mod_add();
+  std::cout << "[test] Vectorized Rescue Prime field arithmetic\n";
+
+#endif
 
   test_rphash::test_alphas();
   test_rphash::test_permutation();
