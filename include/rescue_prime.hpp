@@ -10,9 +10,10 @@ namespace rescue_prime {
 // This implementation is adapted from
 // https://github.com/novifinancial/winterfell/blob/21173bd/crypto/src/hash/rescue/rp64_256/mod.rs#L223-L256
 static inline void
-hash(const ff::ff_t* const __restrict in,
-     const size_t ilen,
-     ff::ff_t* const __restrict out)
+hash(const ff::ff_t* const __restrict in, // input elements ∈ Z_q
+     const size_t ilen,             // number of input elements to be hashed
+     ff::ff_t* const __restrict out // 4 output elements ∈ Z_q
+)
 {
   ff::ff_t state[rescue::STATE_WIDTH]{};
   state[rescue::CAPACITY_BEGINS] = ff::ff_t{ ilen };
@@ -28,8 +29,8 @@ hash(const ff::ff_t* const __restrict in,
     rescue::permute(state);
   }
 
-  std::memcpy(state + rescue::RATE_BEGINS, in + off, rm_elms << 3);
   if (rm_elms > 0) {
+    std::memcpy(state + rescue::RATE_BEGINS, in + off, rm_elms << 3);
     rescue::permute(state);
   }
 
