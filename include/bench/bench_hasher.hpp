@@ -1,27 +1,33 @@
 #pragma once
 #include "bench_common.hpp"
-#include "permutation.hpp"
+#include "rescue_prime.hpp"
 
 // Benchmark Rescue Prime hash and its components, using google-benchmark
 namespace bench_rphash {
 
-// Benchmark Rescue permutation
+// Benchmark Rescue Prime element hasher function, with input size of N ( > 0 )
 inline void
-permutation(benchmark::State& state)
+hash(benchmark::State& state)
 {
-  ff::ff_t st[rescue::STATE_WIDTH];
+  const size_t ilen = state.range();
+  constexpr size_t olen = rescue::DIGEST_WIDTH;
+
+  auto* input = static_cast<ff::ff_t*>(std::malloc(ilen * sizeof(ff::ff_t)));
+  auto* output = static_cast<ff::ff_t*>(std::malloc(olen * sizeof(ff::ff_t)));
 
   std::vector<uint64_t> durations;
 
   for (auto _ : state) {
-    for (size_t i = 0; i < rescue::STATE_WIDTH; i++) {
-      st[i] = ff::ff_t::random();
+    for (size_t i = 0; i < ilen; i++) {
+      input[i] = ff::ff_t::random();
     }
 
     const auto t0 = std::chrono::high_resolution_clock::now();
 
-    rescue::permute(st);
-    benchmark::DoNotOptimize(st);
+    rescue_prime::hash(input, ilen, output);
+    benchmark::DoNotOptimize(input);
+    benchmark::DoNotOptimize(ilen);
+    benchmark::DoNotOptimize(output);
     benchmark::ClobberMemory();
 
     const auto t1 = std::chrono::high_resolution_clock::now();
@@ -48,6 +54,9 @@ permutation(benchmark::State& state)
   std::nth_element(durations.begin(), mid_idx, durations.end());
   const auto mid = durations[lenby2];
   state.counters["median_exec_time (ns)"] = static_cast<double>(mid);
+
+  std::free(input);
+  std::free(output);
 }
 
 }
