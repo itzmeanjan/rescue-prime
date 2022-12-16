@@ -13,14 +13,25 @@ namespace ff {
 // Resulting 256 -bit register holds four 64 -bit limbs, each setting all of its
 // bits to 1, if a >= b, otherwise all 64 of those bits ( of that specific limb
 // ) is set to 0.
-static inline constexpr __m256i
+static inline __m256i
 gte(const __m256i a, const __m256i b)
 {
-  const auto t0 = _mm256_cmpgt_epi64(a, b);
-  const auto t1 = _mm256_cmpeq_epi64(a, b);
-  const auto t2 = _mm256_or_si256(t0, t1);
+  // To determine whether a > b | a, b ∈ [0, 2^64), it's enough to compare high
+  // 32 -bits of a, b.
+  //
+  // I've to choose this path due to the fact that `_mm256_cmpgt_epi64`
+  // intrinsic treats each 64 -bit limb to be a signed 64 -bit integer, which
+  // effectively rounds off operands and that ends up producing wrong comparison
+  // result, in a lot of cases.
 
-  return t2;
+  const auto t0 = _mm256_srli_epi64(a, 32);
+  const auto t1 = _mm256_srli_epi64(b, 32);
+
+  const auto t2 = _mm256_cmpgt_epi64(t0, t1); // is > ?
+  const auto t3 = _mm256_cmpeq_epi64(a, b);   // is = ?
+  const auto t4 = _mm256_or_si256(t2, t3);    // is >= ?
+
+  return t4;
 }
 
 // Given a 256 -bit register, holding four 64 -bit unsigned integers, this
@@ -52,7 +63,7 @@ struct ff_avx_t
   //
   // Ensure that starting memory address is 32 -bytes aligned, otherwise it'll
   // result in a segmentation fault.
-  inline constexpr ff_avx_t(const ff::ff_t* const arr)
+  inline ff_avx_t(const ff::ff_t* const arr)
   {
     v = _mm256_load_si256((__m256i*)arr);
   }
@@ -62,15 +73,30 @@ struct ff_avx_t
   // canonical form i.e. each 64 -bit result limb must ∈ Z_q.
   inline ff_avx_t operator+(const ff_avx_t& rhs) const
   {
-    const auto t0 = _mm256_add_epi64(this->v, rhs.v);
     const auto u256 = _mm256_set1_epi64x(UINT64_MAX);
-    const auto t1 = _mm256_sub_epi64(u256, rhs.v);
-    const auto t2 = _mm256_cmpgt_epi64(this->v, t1);
-    const auto t3 = _mm256_srli_epi64(t2, 32);
-    const auto t4 = _mm256_add_epi64(t0, t3);
-    const auto t5 = reduce(t4);
 
-    return ff_avx_t{ t5 };
+    const auto t0 = _mm256_add_epi64(this->v, rhs.v);
+    const auto t1 = _mm256_sub_epi64(u256, rhs.v);
+
+    const auto t2 = _mm256_srli_epi64(this->v, 32);
+    const auto t3 = _mm256_srli_epi64(t1, 32);
+    const auto t4 = _mm256_cmpgt_epi64(t2, t3);
+
+    const auto t5 = _mm256_srli_epi64(t4, 32);
+    const auto t6 = _mm256_add_epi64(t0, t5);
+
+    const auto t7 = reduce(t6);
+
+    return ff_avx_t{ t7 };
+  }
+
+  // Stores four prime field Z_q elements ( kept in a 256 -bit register ) into
+  // 32 -bytes aligned memory s.t. starting memory address is provided. If
+  // starting memory address is not aligned to 32 -bytes boundary, it'll result
+  // in a segmentation fault.
+  inline void store(ff::ff_t* const arr) const
+  {
+    _mm256_store_si256((__m256i*)arr, this->v);
   }
 };
 
