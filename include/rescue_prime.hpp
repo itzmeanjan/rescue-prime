@@ -25,12 +25,25 @@ hash(const ff::ff_t* const __restrict in, // input elements ∈ Z_q
   for (size_t i = 0; i < blk_cnt; i++) {
     const size_t ioff = i << 3;
 
-    std::memcpy(state + rescue::RATE_BEGINS, in + ioff, rescue::RATE << 3);
+#if defined __GNUC__
+#pragma GCC unroll 8
+#elif defined __clang__
+#pragma unroll 8
+#endif
+    for (size_t j = 0; j < rescue::RATE; j++) {
+      constexpr size_t soff = rescue::RATE_BEGINS;
+      state[soff + j] = state[soff + j] + in[ioff + j];
+    }
+
     rescue::permute(state);
   }
 
   if (rm_elms > 0) {
-    std::memcpy(state + rescue::RATE_BEGINS, in + off, rm_elms << 3);
+    for (size_t j = 0; j < rm_elms; j++) {
+      constexpr size_t soff = rescue::RATE_BEGINS;
+      state[soff + j] = state[soff + j] + in[off + j];
+    }
+
     rescue::permute(state);
   }
 
