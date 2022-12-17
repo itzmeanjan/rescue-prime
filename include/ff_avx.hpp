@@ -1,5 +1,6 @@
 #pragma once
 #include "ff.hpp"
+#include <utility>
 
 #if defined __AVX2__
 #include <immintrin.h>
@@ -49,6 +50,55 @@ reduce(const __m256i a)
   return t2;
 }
 
+// Given two 256 -bit registers, each holding four 64 -bit unsigned integers,
+// this routine performs a full multiplication of each 64 -bit wide limb with
+// corresponding limb on other register, producing a 128 -bit result, which is
+// splitted into high 64 -bits and low 64 -bits, maintained on two different
+// resulting registers.
+//
+// Note, returned 256 -bit register pair holds
+//
+// - high 64 -bits in first register
+// - then low 64 -bits are kept on second register
+//
+// This routine does exactly what
+// https://github.com/itzmeanjan/rescue-prime/blob/22b7aa5/include/ff.hpp#L15-L50
+// does, only difference is that it performs four of those.
+static inline std::pair<__m256i, __m256i>
+full_mul_u64x4(const __m256i lhs, const __m256i rhs)
+{
+  const auto u32x4 = _mm256_set1_epi64x(UINT32_MAX);
+
+  const auto lhs_hi = _mm256_srli_epi64(lhs, 32);
+  const auto rhs_hi = _mm256_srli_epi64(rhs, 32);
+
+  const auto hi = _mm256_mul_epu32(lhs_hi, rhs_hi);
+  const auto mid0 = _mm256_mul_epu32(lhs_hi, rhs);
+  const auto mid1 = _mm256_mul_epu32(lhs, rhs_hi);
+  const auto lo = _mm256_mul_epu32(lhs, rhs);
+
+  const auto mid0_hi = _mm256_srli_epi64(mid0, 32);
+  const auto mid0_lo = _mm256_and_si256(mid0, u32x4);
+  const auto mid1_hi = _mm256_srli_epi64(mid1, 32);
+  const auto mid1_lo = _mm256_and_si256(mid1, u32x4);
+
+  const auto t0 = _mm256_srli_epi64(lo, 32);
+  const auto t1 = _mm256_add_epi64(t0, mid0_lo);
+  const auto t2 = _mm256_add_epi64(t1, mid1_lo);
+  const auto carry = _mm256_srli_epi64(t2, 32);
+
+  const auto t3 = _mm256_add_epi64(hi, mid0_hi);
+  const auto t4 = _mm256_add_epi64(t3, mid1_hi);
+  const auto res_hi = _mm256_add_epi64(t4, carry);
+
+  const auto t5 = _mm256_slli_epi64(mid0_lo, 32);
+  const auto t6 = _mm256_slli_epi64(mid1_lo, 32);
+  const auto t7 = _mm256_add_epi64(lo, t5);
+  const auto res_lo = _mm256_add_epi64(t7, t6);
+
+  return std::make_pair(res_hi, res_lo);
+}
+
 // Four elements of prime field Z_q | q = 2^64 - 2^32 + 1, stored in a 256 -bit
 // AVX2 register, loaded *only* from 32 -bytes aligned memory address ( see
 // constructor ), defining modular {addition, multiplication} over it.
@@ -73,10 +123,10 @@ struct ff_avx_t
   // canonical form i.e. each 64 -bit result limb must ∈ Z_q.
   inline ff_avx_t operator+(const ff_avx_t& rhs) const
   {
-    const auto u256 = _mm256_set1_epi64x(UINT64_MAX);
+    const auto u64x4 = _mm256_set1_epi64x(UINT64_MAX);
 
     const auto t0 = _mm256_add_epi64(this->v, rhs.v);
-    const auto t1 = _mm256_sub_epi64(u256, rhs.v);
+    const auto t1 = _mm256_sub_epi64(u64x4, rhs.v);
 
     const auto t2 = _mm256_srli_epi64(this->v, 32);
     const auto t3 = _mm256_srli_epi64(t1, 32);
