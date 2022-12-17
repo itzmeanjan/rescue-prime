@@ -63,7 +63,7 @@ reduce(const __m256i a)
 //
 // This routine does exactly what
 // https://github.com/itzmeanjan/rescue-prime/blob/22b7aa5/include/ff.hpp#L15-L50
-// does, only difference is that it performs four of those.
+// does, only difference is that it performs four of those operations at a time.
 static inline std::pair<__m256i, __m256i>
 full_mul_u64x4(const __m256i lhs, const __m256i rhs)
 {
@@ -121,6 +121,11 @@ struct ff_avx_t
   // Given two 256 -bit registers, each holding 4 prime field Z_q elements, this
   // routine performs element wise addition over Z_q and returns result in
   // canonical form i.e. each 64 -bit result limb must ∈ Z_q.
+  //
+  // This routine does what
+  // https://github.com/itzmeanjan/rescue-prime/blob/22b7aa5/include/ff.hpp#L73-L84
+  // does, only difference is that instead of working on single element at a
+  // time, it works on four of them.
   inline ff_avx_t operator+(const ff_avx_t& rhs) const
   {
     const auto u64x4 = _mm256_set1_epi64x(UINT64_MAX);
@@ -138,6 +143,49 @@ struct ff_avx_t
     const auto t7 = reduce(t6);
 
     return ff_avx_t{ t7 };
+  }
+
+  // Given two 256 -bit registers, each holding 4 prime field Z_q elements, this
+  // routine performs element wise multiplication over Z_q and returns result in
+  // canonical form i.e. each 64 -bit result limb must ∈ Z_q.
+  //
+  // This routine does what
+  // https://github.com/itzmeanjan/rescue-prime/blob/22b7aa5/include/ff.hpp#L102-L125
+  // does, only difference is that instead of working on single element at a
+  // time, it works on four of them.
+  inline ff_avx_t operator*(const ff_avx_t& rhs) const
+  {
+    const auto u32x4 = _mm256_set1_epi64x(UINT32_MAX);
+    const auto u64x4 = _mm256_set1_epi64x(UINT64_MAX);
+
+    const auto res = full_mul_u64x4(this->v, rhs.v);
+    const auto res_hi = res.first;
+    const auto res_lo = res.second;
+
+    const auto c = _mm256_and_si256(res_hi, u32x4);
+    const auto d = _mm256_srli_epi64(res_hi, 32);
+
+    const auto t2 = _mm256_sub_epi64(res_lo, d);
+    const auto t3 = _mm256_srli_epi64(res_lo, 32);
+    const auto t4 = _mm256_srli_epi64(d, 32);
+    const auto t5 = _mm256_cmpgt_epi64(t4, t3);
+    const auto t6 = _mm256_srli_epi64(t5, 32);
+    const auto t7 = _mm256_sub_epi64(t2, t6);
+
+    const auto t8 = _mm256_slli_epi64(c, 32);
+    const auto t9 = _mm256_sub_epi64(t8, c);
+    const auto t10 = _mm256_add_epi64(t7, t9);
+
+    const auto t11 = _mm256_sub_epi64(u64x4, t9);
+    const auto t12 = _mm256_srli_epi64(t7, 32);
+    const auto t13 = _mm256_srli_epi64(t11, 32);
+    const auto t14 = _mm256_cmpgt_epi64(t12, t13);
+    const auto t15 = _mm256_srli_epi64(t14, 32);
+    const auto t16 = _mm256_add_epi64(t10, t15);
+
+    const auto t17 = reduce(t16);
+
+    return ff_avx_t{ t17 };
   }
 
   // Stores four prime field Z_q elements ( kept in a 256 -bit register ) into
