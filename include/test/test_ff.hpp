@@ -104,6 +104,62 @@ test_avx_mod_add()
   }
 }
 
+// Ensure that vectorized u64 x u64 -> u128, multiplication using AVX2
+// intrinsics, is correctly implemented, by checking computed results against
+// scalar implementation.
+template<const size_t rounds = 256ul>
+void
+test_u64_full_mul()
+{
+  static_assert(rounds > 0, "Round must not be = 0 !");
+
+  std::random_device rd;
+  std::mt19937_64 gen(rd());
+  std::uniform_int_distribution<uint64_t> dis{};
+
+  alignas(32) uint64_t arr0[4 * rounds];
+  alignas(32) uint64_t arr1[4 * rounds];
+  alignas(32) uint64_t computed_res_hi[4 * rounds];
+  alignas(32) uint64_t computed_res_lo[4 * rounds];
+  alignas(32) uint64_t expected_res_hi[4 * rounds];
+  alignas(32) uint64_t expected_res_lo[4 * rounds];
+
+  // generate some random u64s
+  for (size_t i = 0; i < 4 * rounds; i++) {
+    arr0[i] = dis(gen);
+    arr1[i] = dis(gen);
+  }
+
+  // compute full multiplication of two u64s, resulting into high and low
+  // 64 -bit halves
+  for (size_t i = 0; i < 4 * rounds; i++) {
+    const auto res = ff::full_mul_u64(arr0[i], arr1[i]);
+
+    expected_res_hi[i] = res.first;
+    expected_res_lo[i] = res.second;
+  }
+
+  // compute full mutliplication of two u64s, resulting into high and low
+  // 64 -bit halves, using AVX2 implementation
+  for (size_t i = 0; i < rounds; i++) {
+    const size_t off = i * 4;
+
+    const auto a = _mm256_load_si256((__m256i*)(arr0 + off));
+    const auto b = _mm256_load_si256((__m256i*)(arr1 + off));
+
+    const auto res = ff::full_mul_u64x4(a, b);
+
+    _mm256_store_si256((__m256i*)(computed_res_hi + off), res.first);
+    _mm256_store_si256((__m256i*)(computed_res_lo + off), res.second);
+  }
+
+  // finally ensure both implementations produce same result.
+  for (size_t i = 0; i < 4 * rounds; i++) {
+    assert(computed_res_hi[i] == expected_res_hi[i]);
+    assert(computed_res_lo[i] == expected_res_lo[i]);
+  }
+}
+
 #endif
 
 }
