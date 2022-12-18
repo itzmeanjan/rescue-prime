@@ -192,6 +192,28 @@ exp7(const ff::ff_t v)
 
 #endif
 
+#if defined __AVX2__ && USE_AVX2 != 0
+
+// Adapted from
+// https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/mod.rs#L17-L25,
+// to perform cheaper exponentiation, using multiplications, on four Z_q
+// elements, using AVX2 vector intrinsics.
+template<const size_t m>
+static inline ff::ff_avx_t
+exp_acc(const ff::ff_avx_t base, const ff::ff_avx_t tail)
+{
+  ff::ff_avx_t res = base;
+
+  for (size_t i = 0; i < m; i++) {
+    res = res * res;
+  }
+
+  res = res * tail;
+  return res;
+}
+
+#else
+
 // Taken from
 // https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/mod.rs#L17-L25,
 // to perform cheaper exponentiation
@@ -224,6 +246,8 @@ exp_acc(const ff::ff_t* const base,
     res[i] = res[i] * tail[i];
   }
 }
+
+#endif
 
 // Applies substitution box on Rescue permutation state, by raising each element
 // to its 7-th power.
