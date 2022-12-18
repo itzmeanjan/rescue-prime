@@ -203,17 +203,25 @@ exp7(const ff::ff_t v)
 // to perform cheaper exponentiation, using multiplications, on four Z_q
 // elements, using AVX2 vector intrinsics.
 template<const size_t m>
-static inline ff::ff_avx_t
-exp_acc(const ff::ff_avx_t base, const ff::ff_avx_t tail)
+static inline std::array<ff::ff_avx_t, 3>
+exp_acc(const std::array<ff::ff_avx_t, 3> base,
+        const std::array<ff::ff_avx_t, 3> tail)
 {
-  ff::ff_avx_t res = base;
+  ff::ff_avx_t res0 = base[0];
+  ff::ff_avx_t res1 = base[1];
+  ff::ff_avx_t res2 = base[2];
 
   for (size_t i = 0; i < m; i++) {
-    res = res * res;
+    res0 = res0 * res0;
+    res1 = res1 * res1;
+    res2 = res2 * res2;
   }
 
-  res = res * tail;
-  return res;
+  res0 = res0 * tail[0];
+  res1 = res1 * tail[1];
+  res2 = res2 * tail[2];
+
+  return { res0, res1, res2 };
 }
 
 #else
