@@ -2,11 +2,12 @@ CXX = g++
 CXXFLAGS = -std=c++20 -Wall -Wextra -pedantic
 OPTFLAGS = -O3 -march=native -mtune=native
 IFLAGS = -I ./include
+DUSE_AVX2 = -DUSE_AVX2=$(or $(AVX2),0)
 
 all: testing
 
 test/a.out: test/main.cpp include/*.hpp include/test/*.hpp
-	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(IFLAGS) $< -o $@
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(IFLAGS) $(DUSE_AVX2) $< -o $@
 
 testing: test/a.out
 	./$<
@@ -20,7 +21,7 @@ format:
 bench/a.out: bench/main.cpp include/*.hpp include/bench/*.hpp
 	# make sure you've google-benchmark globally installed;
 	# see https://github.com/google/benchmark/tree/da652a7#installation
-	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(IFLAGS) $< -lbenchmark -o $@
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(IFLAGS) $(DUSE_AVX2) $< -lbenchmark -o $@
 
 benchmark: bench/a.out
 	./$< --benchmark_time_unit=ns --benchmark_counters_tabular=true
