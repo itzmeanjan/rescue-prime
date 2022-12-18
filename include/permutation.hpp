@@ -1,5 +1,5 @@
 #pragma once
-#include "ff.hpp"
+#include "ff_avx.hpp"
 #include <cstring>
 
 // Rescue Permutation over prime field Z_q, q = 2^64 - 2^32 + 1
@@ -47,7 +47,7 @@ constexpr size_t INV_ALPHA = 10540996611094048183ul;
 
 // Precomputed Rescue MDS matrix, which is of dimension 12 x 12, taken from
 // https://github.com/novifinancial/winterfell/blob/21173bd/crypto/src/hash/rescue/rp64_256/mod.rs#L415-L584
-constexpr ff::ff_t MDS[STATE_WIDTH * STATE_WIDTH]{
+alignas(32) constexpr ff::ff_t MDS[STATE_WIDTH * STATE_WIDTH]{
   7ul,  23ul, 8ul,  26ul, 13ul, 10ul, 9ul,  7ul,  6ul,  22ul, 21ul, 8ul,
 
   8ul,  7ul,  23ul, 8ul,  26ul, 13ul, 10ul, 9ul,  7ul,  6ul,  22ul, 21ul,
@@ -76,7 +76,7 @@ constexpr ff::ff_t MDS[STATE_WIDTH * STATE_WIDTH]{
 // Precomputed Rescue round constants, used during first half of the
 // permutation, taken from
 // https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/rp64_256/mod.rs#L721-L828
-constexpr ff::ff_t RC0[ROUNDS * STATE_WIDTH]{
+alignas(32) constexpr ff::ff_t RC0[ROUNDS * STATE_WIDTH]{
   13917550007135091859ul, 16002276252647722320ul, 4729924423368391595ul,
   10059693067827680263ul, 9804807372516189948ul,  15666751576116384237ul,
   10150587679474953119ul, 13627942357577414247ul, 2323786301545403792ul,
@@ -116,7 +116,7 @@ constexpr ff::ff_t RC0[ROUNDS * STATE_WIDTH]{
 // Precomputed Rescue round constants, used during last half of the
 // permutation, taken from
 // https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/rp64_256/mod.rs#L830-L929
-constexpr ff::ff_t RC1[ROUNDS * STATE_WIDTH]{
+alignas(32) constexpr ff::ff_t RC1[ROUNDS * STATE_WIDTH]{
   7989257206380839449ul,  8639509123020237648ul,  6488561830509603695ul,
   5519169995467998761ul,  2972173318556248829ul,  14899875358187389787ul,
   14160104549881494022ul, 5969738169680657501ul,  5116050734813646528ul,
