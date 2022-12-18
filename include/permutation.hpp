@@ -419,6 +419,48 @@ apply_inv_sbox(ff::ff_t* const state)
 
 #endif
 
+#if defined __AVX2__ && USE_AVX2 != 0
+
+// Uses AVX2 intrinsics for adding round constants to Rescue permutation state.
+//
+// Note this routine is used during the first half of Rescue permutation.
+static inline std::array<ff::ff_avx_t, 3>
+add_rc0(std::array<ff::ff_avx_t, 3> state, const size_t ridx)
+{
+  const size_t rc_off = ridx * STATE_WIDTH;
+
+  const ff::ff_avx_t rc0{ RC0 + rc_off + 0ul };
+  const ff::ff_avx_t rc1{ RC0 + rc_off + 4ul };
+  const ff::ff_avx_t rc2{ RC0 + rc_off + 8ul };
+
+  const auto t0 = state[0] + rc0;
+  const auto t1 = state[1] + rc1;
+  const auto t2 = state[2] + rc2;
+
+  return { t0, t1, t2 };
+}
+
+// Uses AVX2 intrinsics for adding round constants to Rescue permutation state.
+//
+// Note this routine is used during the last half of Rescue permutation.
+static inline std::array<ff::ff_avx_t, 3>
+add_rc1(std::array<ff::ff_avx_t, 3> state, const size_t ridx)
+{
+  const size_t rc_off = ridx * STATE_WIDTH;
+
+  const ff::ff_avx_t rc0{ RC1 + rc_off + 0ul };
+  const ff::ff_avx_t rc1{ RC1 + rc_off + 4ul };
+  const ff::ff_avx_t rc2{ RC1 + rc_off + 8ul };
+
+  const auto t0 = state[0] + rc0;
+  const auto t1 = state[1] + rc1;
+  const auto t2 = state[2] + rc2;
+
+  return { t0, t1, t2 };
+}
+
+#else
+
 // Adds round constants to Rescue permutation state.
 //
 // Note this routine is used during the first half of Rescue permutation.
@@ -454,6 +496,8 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
     state[i] = state[i] + RC1[rc_off + i];
   }
 }
+
+#endif
 
 // Multiplies Rescue permutation state by MDS matrix
 static inline void
