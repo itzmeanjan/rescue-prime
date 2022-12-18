@@ -547,6 +547,33 @@ mul_state_by_row(std::array<ff::ff_avx_t, 3> state,
   return res;
 }
 
+// Given a 256 -bit AVX2 register holding four elements ∈ Z_q, this routine
+// accumulates all four lanes into each of four resulting lanes, over Z_q
+//
+// 0: a0, a1, a2, a3
+// 1: a1, a2, a3, a0
+// 2: a2, a3, a0, a1
+// 3: a3, a0, a1, a2
+//
+// -------------------
+//
+// res: (a0+a1+a2+a3), (a0+a1+a2+a3), (a0+a1+a2+a3), (a0+a1+a2+a3)
+//
+// Resulting vector should hold same value ( ∈ Z_q ) on all of its lanes.
+static inline ff::ff_avx_t
+accumulate_lanes(const ff::ff_avx_t vec)
+{
+  const auto t0 = _mm256_permute4x64_epi64(vec.v, 0b00111001);
+  const auto t1 = _mm256_permute4x64_epi64(t0, 0b00111001);
+  const auto t2 = _mm256_permute4x64_epi64(t1, 0b00111001);
+
+  const auto t3 = vec + ff::ff_avx_t{ t0 };
+  const auto t4 = t3 + ff::ff_avx_t{ t1 };
+  const auto t5 = t4 + ff::ff_avx_t{ t2 };
+
+  return t5;
+}
+
 #endif
 
 // Multiplies Rescue permutation state by MDS matrix
