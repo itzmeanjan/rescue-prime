@@ -1,4 +1,5 @@
 #pragma once
+#include "ff.hpp"
 #include "ff_avx.hpp"
 #include <cassert>
 
