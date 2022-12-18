@@ -153,6 +153,27 @@ alignas(32) constexpr ff::ff_t RC1[ROUNDS * STATE_WIDTH]{
   12717309295554119359ul, 4130723396860574906ul,  7706153020203677238ul,
 };
 
+#if defined __AVX2__ && USE_AVX2 != 0
+
+// Uses vector instrinsics for raising four elements ∈ Z_q to their 7-th power,
+// by using less multiplications, than one would do if done using standard
+// exponentiation routine.
+//
+// Adapted from
+// https://github.com/novifinancial/winterfell/blob/437dc08/math/src/field/f64/mod.rs#L74-L82
+static inline ff::ff_avx_t
+exp7(const ff::ff_avx_t v)
+{
+  const auto v2 = v * v;
+  const auto v4 = v2 * v2;
+  const auto v6 = v2 * v4;
+  const auto v7 = v * v6;
+
+  return v7;
+}
+
+#else
+
 // Raise an element ∈ Z_q to its 7-th power, by using less multiplications, than
 // one would do if done using standard exponentiation routine.
 //
@@ -161,13 +182,15 @@ alignas(32) constexpr ff::ff_t RC1[ROUNDS * STATE_WIDTH]{
 static inline ff::ff_t
 exp7(const ff::ff_t v)
 {
-  const ff::ff_t v2 = v * v;
-  const ff::ff_t v4 = v2 * v2;
-  const ff::ff_t v6 = v2 * v4;
-  const ff::ff_t v7 = v * v6;
+  const auto v2 = v * v;
+  const auto v4 = v2 * v2;
+  const auto v6 = v2 * v4;
+  const auto v7 = v * v6;
 
   return v7;
 }
+
+#endif
 
 // Taken from
 // https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/mod.rs#L17-L25,
