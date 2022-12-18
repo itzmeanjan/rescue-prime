@@ -500,7 +500,7 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
 
 #endif
 
-#if defined __AVX2__ && USE_AVX2 != 0
+#if !(defined __AVX2__ && USE_AVX2 != 0)
 
 // Given that MDS matrix is a circulant one, current row which is supposed to be
 // multiplied with Rescue state can be used for computing the next row by
@@ -520,6 +520,31 @@ compute_next_mds_row(std::array<ff::ff_avx_t, 3> row)
   const auto res2 = _mm256_blend_epi32(t1, t2, 0b11111100);
 
   return { res0, res1, res2 };
+}
+
+// Given Rescue state array and MDS matrix row, in AVX2 registers, this routine
+// performs element wise multiplication and adds resulting lanes ( 12 of them )
+// s.t. it produces 4 lanes i.e. stored in a single AVX2 256 -bit register.
+//
+// To give some more insight into how it's done
+//
+// t0[0..4) = state[0..4) * row[0..4)
+// t1[0..4) = state[4..8) * row[4..8)
+// t2[0..4) = state[8..12) * row[8..12)
+//
+// res[0..4) = t0[0..4) + t1[0..4) + t2[0..4)
+static inline ff::ff_avx_t
+mul_state_by_row(std::array<ff::ff_avx_t, 3> state,
+                 std::array<ff::ff_avx_t, 3> row)
+{
+  const auto res0 = state[0] * row[0];
+  const auto res1 = state[1] * row[1];
+  const auto res2 = state[2] * row[2];
+
+  const auto tmp = res0 + res1;
+  const auto res = tmp + res2;
+
+  return res;
 }
 
 #endif
