@@ -500,7 +500,7 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
 
 #endif
 
-#if !(defined __AVX2__ && USE_AVX2 != 0)
+#if defined __AVX2__ && USE_AVX2 != 0
 
 // Given that MDS matrix is a circulant one, current row which is supposed to be
 // multiplied with Rescue state can be used for computing the next row by
@@ -574,7 +574,90 @@ accumulate_lanes(const ff::ff_avx_t vec)
   return t5;
 }
 
-#endif
+// Uses AVX2 intrinsics for multiplying Rescue permutation state by MDS matrix
+static inline std::array<ff::ff_avx_t, 3>
+apply_mds(std::array<ff::ff_avx_t, 3> state)
+{
+  const std::array<ff::ff_avx_t, 3> mds_row0{ MDS + 0ul, MDS + 4ul, MDS + 8ul };
+
+  const auto t0 = mul_state_by_row(state, mds_row0);
+  const auto t1 = accumulate_lanes(t0);
+
+  const auto mds_row1 = compute_next_mds_row(mds_row0);
+  const auto t2 = mul_state_by_row(state, mds_row1);
+  const auto t3 = accumulate_lanes(t2);
+
+  // state[0], state[1], _, _
+  const auto r0 = _mm256_blend_epi32(t1.v, t3.v, 0b00001100);
+
+  const auto mds_row2 = compute_next_mds_row(mds_row1);
+  const auto t4 = mul_state_by_row(state, mds_row2);
+  const auto t5 = accumulate_lanes(t4);
+
+  // state[0], state[1], state[2], _
+  const auto r1 = _mm256_blend_epi32(r0, t5.v, 0b00110000);
+
+  const auto mds_row3 = compute_next_mds_row(mds_row2);
+  const auto t6 = mul_state_by_row(state, mds_row3);
+  const auto t7 = accumulate_lanes(t6);
+
+  // state[0], state[1], state[2], state[3]
+  const auto r2 = _mm256_blend_epi32(r1, t7.v, 0b11000000);
+
+  const auto mds_row4 = compute_next_mds_row(mds_row3);
+  const auto t8 = mul_state_by_row(state, mds_row4);
+  const auto t9 = accumulate_lanes(t8);
+
+  const auto mds_row5 = compute_next_mds_row(mds_row4);
+  const auto t10 = mul_state_by_row(state, mds_row5);
+  const auto t11 = accumulate_lanes(t10);
+
+  // state[4], state[5], _, _
+  const auto r3 = _mm256_blend_epi32(t9.v, t11.v, 0b00001100);
+
+  const auto mds_row6 = compute_next_mds_row(mds_row5);
+  const auto t12 = mul_state_by_row(state, mds_row6);
+  const auto t13 = accumulate_lanes(t12);
+
+  // state[4], state[5], state[6], _
+  const auto r4 = _mm256_blend_epi32(r3, t13.v, 0b00110000);
+
+  const auto mds_row7 = compute_next_mds_row(mds_row6);
+  const auto t14 = mul_state_by_row(state, mds_row7);
+  const auto t15 = accumulate_lanes(t14);
+
+  // state[4], state[5], state[6], state[7]
+  const auto r5 = _mm256_blend_epi32(r4, t15.v, 0b11000000);
+
+  const auto mds_row8 = compute_next_mds_row(mds_row7);
+  const auto t16 = mul_state_by_row(state, mds_row8);
+  const auto t17 = accumulate_lanes(t16);
+
+  const auto mds_row9 = compute_next_mds_row(mds_row8);
+  const auto t18 = mul_state_by_row(state, mds_row9);
+  const auto t19 = accumulate_lanes(t18);
+
+  // state[8], state[9], _, _
+  const auto r6 = _mm256_blend_epi32(t17.v, t19.v, 0b00001100);
+
+  const auto mds_row10 = compute_next_mds_row(mds_row9);
+  const auto t20 = mul_state_by_row(state, mds_row10);
+  const auto t21 = accumulate_lanes(t20);
+
+  // state[8], state[9], state[10], _
+  const auto r7 = _mm256_blend_epi32(r6, t21.v, 0b00110000);
+
+  const auto mds_row11 = compute_next_mds_row(mds_row10);
+  const auto t22 = mul_state_by_row(state, mds_row11);
+  const auto t23 = accumulate_lanes(t22);
+
+  // state[8], state[9], state[10], state[11]
+  const auto r8 = _mm256_blend_epi32(r7, t23.v, 0b11000000);
+
+  return { r2, r5, r8 };
+}
+
+#else
 
 // Multiplies Rescue permutation state by MDS matrix
 static inline void
@@ -597,6 +680,8 @@ apply_mds(ff::ff_t* const state)
 
   std::memcpy(state, tmp, sizeof(tmp));
 }
+
+#endif
 
 // Apply single Rescue permutation round
 static inline void
