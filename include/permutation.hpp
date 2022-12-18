@@ -2,6 +2,10 @@
 #include "ff_avx.hpp"
 #include <cstring>
 
+#if defined __AVX2__ && USE_AVX2 != 0
+#include <array>
+#endif
+
 // Rescue Permutation over prime field Z_q, q = 2^64 - 2^32 + 1
 //
 // Constants are taken from
@@ -249,6 +253,22 @@ exp_acc(const ff::ff_t* const base,
 
 #endif
 
+#if defined __AVX2__ && USE_AVX2 != 0
+
+// Uses AVX2 vector intrinsics for applying substitution box on Rescue
+// permutation state, by raising each element to its 7-th power.
+static inline std::array<ff::ff_avx_t, 3>
+apply_sbox(std::array<ff::ff_avx_t, 3> state)
+{
+  const auto a = exp7(state[0]);
+  const auto b = exp7(state[1]);
+  const auto c = exp7(state[2]);
+
+  return { a, b, c };
+}
+
+#else
+
 // Applies substitution box on Rescue permutation state, by raising each element
 // to its 7-th power.
 static inline void
@@ -263,6 +283,8 @@ apply_sbox(ff::ff_t* const state)
     state[i] = exp7(state[i]);
   }
 }
+
+#endif
 
 // Applies inverse substitution box on Rescue permutation state, by raising each
 // element to its 10540996611094048183-th power, with lesser many
