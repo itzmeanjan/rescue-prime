@@ -1,8 +1,7 @@
 #pragma once
-#include "ff.hpp"
-#include <utility>
 
 #if defined __AVX2__
+#include "ff.hpp"
 #include <immintrin.h>
 
 // Prime Field ( i.e. Z_q ) Arithmetic | q = 2^64 - 2^32 + 1
