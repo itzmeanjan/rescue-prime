@@ -683,6 +683,48 @@ apply_mds(ff::ff_t* const state)
 
 #endif
 
+#if defined __AVX2__ && USE_AVX2 != 0
+
+// Apply single Rescue permutation round, using AVX2 intrinsics
+static inline std::array<ff::ff_avx_t, 3>
+apply_round(std::array<ff::ff_avx_t, 3> state, const size_t ridx)
+{
+  // first half
+  const auto t0 = apply_sbox(state);
+  const auto t1 = apply_mds(t0);
+  const auto t2 = add_rc0(t1, ridx);
+
+  // second half
+  const auto t3 = apply_inv_sbox(t2);
+  const auto t4 = apply_mds(t3);
+  const auto t5 = add_rc1(t4, ridx);
+
+  return t5;
+}
+
+// Applies Rescue Permutation of 7 rounds, on 32 -bytes aligned state array,
+// which is 12 field elements ( i.e. Z_q ) wide, using AVX2 intrinsics. Final
+// permutation result is written back into same memory allocation, with starting
+// address being aligned with 32 -bytes boundary.
+//
+// Note, if starting memory address of state is not aligned with 32 -bytes
+// boundary, it'll result into a segmentation fault.
+static inline void
+permute(ff::ff_t* const state)
+{
+  std::array<ff::ff_avx_t, 3> res{ state + 0ul, state + 4ul, state + 8ul };
+
+  for (size_t i = 0; i < ROUNDS; i++) {
+    res = apply_round(res, i);
+  }
+
+  res[0].store(state + 0ul);
+  res[1].store(state + 4ul);
+  res[2].store(state + 8ul);
+}
+
+#else
+
 // Apply single Rescue permutation round
 static inline void
 apply_round(ff::ff_t* const state, const size_t ridx)
@@ -706,5 +748,7 @@ permute(ff::ff_t* const state)
     apply_round(state, i);
   }
 }
+
+#endif
 
 }
