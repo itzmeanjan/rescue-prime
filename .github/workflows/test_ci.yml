@@ -1,0 +1,27 @@
+name: Test Rescue Prime using CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Compiler
+      run: |
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 10
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9
+    - name: Execute Tests ( non-AVX2 )
+      run: make
+    - name: Cleanup
+      run: make clean
+    - name: Execute Tests ( AVX2 )
+      run: AVX2=1 make
+    - name: Cleanup
+      run: make clean
