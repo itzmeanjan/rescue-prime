@@ -294,6 +294,65 @@ apply_sbox(ff::ff_t* const state)
 
 #endif
 
+#if defined __AVX2__ && USE_AVX2 != 0
+
+// Uses AVX2 intrinsics for applying inverse substitution box on Rescue
+// permutation state, by raising each element to its 10540996611094048183-th
+// power, with lesser many multiplications.
+//
+// Adapted from
+// https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/rp64_256/mod.rs#L335-L369
+static inline std::array<ff::ff_avx_t, 3>
+apply_inv_sbox(std::array<ff::ff_avx_t, 3> state)
+{
+  const auto t1_0 = state[0] * state[0];
+  const auto t1_1 = state[1] * state[1];
+  const auto t1_2 = state[2] * state[2];
+
+  const auto t2_0 = t1_0 * t1_0;
+  const auto t2_1 = t1_1 * t1_1;
+  const auto t2_2 = t1_2 * t1_2;
+  const std::array<ff::ff_avx_t, 3> t2{ t2_0, t2_1, t2_2 };
+
+  const auto t3 = exp_acc<3>(t2, t2);
+  const auto t4 = exp_acc<6>(t3, t3);
+  const auto t5 = exp_acc<12>(t4, t4);
+  const auto t6 = exp_acc<6>(t5, t3);
+  const auto t7 = exp_acc<31>(t6, t6);
+
+  const auto a0_0 = t7[0] * t7[0];
+  const auto a0_1 = t7[1] * t7[1];
+  const auto a0_2 = t7[2] * t7[2];
+
+  const auto a1_0 = a0_0 * t6[0];
+  const auto a1_1 = a0_1 * t6[1];
+  const auto a1_2 = a0_2 * t6[2];
+
+  const auto a2_0 = a1_0 * a1_0;
+  const auto a2_1 = a1_1 * a1_1;
+  const auto a2_2 = a1_2 * a1_2;
+
+  const auto a3_0 = a2_0 * a2_0;
+  const auto a3_1 = a2_1 * a2_1;
+  const auto a3_2 = a2_2 * a2_2;
+
+  const auto b0_0 = t1_0 * t2_0;
+  const auto b0_1 = t1_1 * t2_1;
+  const auto b0_2 = t1_2 * t2_2;
+
+  const auto b1_0 = b0_0 * state[0];
+  const auto b1_1 = b0_1 * state[1];
+  const auto b1_2 = b0_2 * state[2];
+
+  const auto res_0 = a3_0 * b1_0;
+  const auto res_1 = a3_1 * b1_1;
+  const auto res_2 = a3_2 * b1_2;
+
+  return { res_0, res_1, res_2 };
+}
+
+#else
+
 // Applies inverse substitution box on Rescue permutation state, by raising each
 // element to its 10540996611094048183-th power, with lesser many
 // multiplications.
@@ -357,6 +416,8 @@ apply_inv_sbox(ff::ff_t* const state)
     state[i] = a3 * b1;
   }
 }
+
+#endif
 
 // Adds round constants to Rescue permutation state.
 //
