@@ -15,7 +15,7 @@ hash(const ff::ff_t* const __restrict in, // input elements ∈ Z_q
      ff::ff_t* const __restrict out // 4 output elements ∈ Z_q
 )
 {
-  ff::ff_t state[rescue::STATE_WIDTH]{};
+  alignas(32) ff::ff_t state[rescue::STATE_WIDTH]{};
   state[rescue::CAPACITY_BEGINS] = ff::ff_t{ ilen };
 
   const size_t blk_cnt = ilen >> 3;

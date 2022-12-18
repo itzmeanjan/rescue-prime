@@ -9,7 +9,7 @@ namespace bench_rphash {
 inline void
 permutation(benchmark::State& state)
 {
-  ff::ff_t st[rescue::STATE_WIDTH];
+  alignas(32) ff::ff_t st[rescue::STATE_WIDTH];
 
   std::vector<uint64_t> durations;
 

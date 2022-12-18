@@ -24,13 +24,13 @@ test_alphas()
 inline void
 test_permutation()
 {
-  constexpr ff::ff_t expected[rescue::STATE_WIDTH]{
+  constexpr ff::ff_t expected[]{
     11084501481526603421ul, 6291559951628160880ul, 13626645864671311919ul,
     18397438323058963117ul, 7443014167353970324ul, 17930833023906771425ul,
     4275355080008025761ul,  7676681476902901785ul, 3460534574143792217ul,
     11912731278641497187ul, 8104899243369883110ul, 674509706691634438ul,
   };
-  ff::ff_t state[rescue::STATE_WIDTH]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+  alignas(32) ff::ff_t state[]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
 
   rescue::permute(state);
 
