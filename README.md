@@ -1,6 +1,35 @@
 # rescue-prime
 Rescue Prime Hash Function
 
+## Overview
+
+Arithmetization friendly hash functions i.e. a hash function which works with prime field elements instead of working with raw bits/ bytes/ N -bit words as done by general-purpose hash functions such as SHA3-256, SHA256 or BLAKE3 etc., are very much used in STARK proof systems, due to the fact that their arithmetic circuit over prime field Z_q is much easier to prove. Rescue-Prime hash function is one such arithmetization friendly hash function, which is used by Winterfell STARK prover.
+
+In Winterfell STARK prover, Rescue permutation is performed over prime field Z_q | q = $2^{64} - 2^{32} + 1$ i.e. the hash function exposes API of following form
+
+- Input: N (>0) -many elements ∈ Z_q | q = $2^{64} - 2^{32} + 1$
+- Output: 4 elements ∈ Z_q | q = $2^{64} - 2^{32} + 1$
+
+Here I'm maintaining yet another implementation of Rescue Prime hash function over Z_q | q = $2^{64} - 2^{32} + 1$ which is conformant with Winterfell implementation. 
+
+`rescue-prime` is a zero-dependency, header-only, C++ library which is easy to use. I've written both scalar & vectorized Rescue implementations. If target CPU has AVX2, it can be used to perform Rescue permutation faster.
+
+> **Note**
+
+> For understanding STARK https://aszepieniec.github.io/stark-anatomy
+
+> **Note**
+
+> Original Rescue specification https://ia.cr/2020/1143
+
+> **Note**
+
+> Read more about Rescue Prime in Winterfell [here](https://github.com/novifinancial/winterfell/tree/21173bdf3e552ca7662c7aa2d34515b084ae21b0/crypto)
+
+> **Note**
+
+> Find more about Winterfell https://github.com/novifinancial/winterfell
+
 ## Prerequisites
 
 - A C++ compiler, with C++20 standard library such as `g++`/ `clang++`
