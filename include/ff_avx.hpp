@@ -182,9 +182,7 @@ struct ff_avx_t
     const auto t15 = _mm256_srli_epi64(t14, 32);
     const auto t16 = _mm256_add_epi64(t10, t15);
 
-    const auto t17 = reduce(t16);
-
-    return ff_avx_t{ t17 };
+    return ff_avx_t{ t16 };
   }
 
   // Stores four prime field Z_q elements ( kept in a 256 -bit register ) into
