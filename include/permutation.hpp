@@ -1,13 +1,12 @@
 #pragma once
 
+#include <cstring>
 #if defined __AVX2__ && USE_AVX2 != 0
 #pragma message("Using AVX2 for Rescue permutation")
 
 #include "ff_avx.hpp"
-#include <array>
 #else
 #include "ff.hpp"
-#include <cstring>
 #endif
 
 // Rescue Permutation over prime field Z_q, q = 2^64 - 2^32 + 1
@@ -200,39 +199,13 @@ exp7(const ff::ff_t v)
 
 #endif
 
-#if defined __AVX2__ && USE_AVX2 != 0
-
 // Adapted from
 // https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/mod.rs#L17-L25,
-// to perform cheaper exponentiation, using multiplications, on four Z_q
-// elements, using AVX2 vector intrinsics.
-template<const size_t m>
-static inline std::array<ff::ff_avx_t, 3>
-exp_acc(const std::array<ff::ff_avx_t, 3> base,
-        const std::array<ff::ff_avx_t, 3> tail)
-{
-  ff::ff_avx_t res0 = base[0];
-  ff::ff_avx_t res1 = base[1];
-  ff::ff_avx_t res2 = base[2];
-
-  for (size_t i = 0; i < m; i++) {
-    res0 = res0 * res0;
-    res1 = res1 * res1;
-    res2 = res2 * res2;
-  }
-
-  res0 = res0 * tail[0];
-  res1 = res1 * tail[1];
-  res2 = res2 * tail[2];
-
-  return { res0, res1, res2 };
-}
-
-#else
-
-// Taken from
-// https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/mod.rs#L17-L25,
-// to perform cheaper exponentiation
+// to perform cheaper exponentiation by a constant exponent, using lesser
+// multiplications.
+//
+// Starting address of `base`, `tail` & `res` must be aligned to 32 -bytes
+// boundary, otherwise program will panic !
 template<const size_t m>
 static inline void
 exp_acc(const ff::ff_t* const base,
@@ -243,6 +216,23 @@ exp_acc(const ff::ff_t* const base,
 
   for (size_t i = 0; i < m; i++) {
 
+#if defined __AVX2__ && USE_AVX2 != 0
+
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
+    for (size_t j = 0; j < 3; j++) {
+      const size_t off = j * 4;
+
+      const ff::ff_avx_t t0{ res + off };
+      const auto t1 = t0 * t0;
+      t1.store(res + off);
+    }
+
+#else
+
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
@@ -251,7 +241,27 @@ exp_acc(const ff::ff_t* const base,
     for (size_t j = 0; j < STATE_WIDTH; j++) {
       res[j] = res[j] * res[j];
     }
+
+#endif
   }
+
+#if defined __AVX2__ && USE_AVX2 != 0
+
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
+  for (size_t i = 0; i < 3; i++) {
+    const size_t off = i * 4;
+
+    const ff::ff_avx_t t0{ res + off };
+    const ff::ff_avx_t t1{ tail + off };
+    const auto t2 = t0 * t1;
+    t2.store(res + off);
+  }
+
+#else
 
 #if defined __GNUC__
 #pragma GCC unroll 12
@@ -261,31 +271,35 @@ exp_acc(const ff::ff_t* const base,
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     res[i] = res[i] * tail[i];
   }
-}
 
 #endif
-
-#if defined __AVX2__ && USE_AVX2 != 0
-
-// Uses AVX2 vector intrinsics for applying substitution box on Rescue
-// permutation state, by raising each element to its 7-th power.
-static inline std::array<ff::ff_avx_t, 3>
-apply_sbox(std::array<ff::ff_avx_t, 3> state)
-{
-  const auto a = exp7(state[0]);
-  const auto b = exp7(state[1]);
-  const auto c = exp7(state[2]);
-
-  return { a, b, c };
 }
-
-#else
 
 // Applies substitution box on Rescue permutation state, by raising each element
 // to its 7-th power.
+//
+// Starting address of the Rescue permutation state must be aligned to 32 -bytes
+// boundary, otherwise program will panic !
 static inline void
 apply_sbox(ff::ff_t* const state)
 {
+#if defined __AVX2__ && USE_AVX2 != 0
+
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
+  for (size_t i = 0; i < 3; i++) {
+    const size_t off = i * 4;
+
+    const ff::ff_avx_t t0{ state + off };
+    const auto t1 = exp7(t0);
+    t1.store(state + off);
+  }
+
+#else
+
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
@@ -294,68 +308,9 @@ apply_sbox(ff::ff_t* const state)
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] = exp7(state[i]);
   }
-}
 
 #endif
-
-#if defined __AVX2__ && USE_AVX2 != 0
-
-// Uses AVX2 intrinsics for applying inverse substitution box on Rescue
-// permutation state, by raising each element to its 10540996611094048183-th
-// power, with lesser many multiplications.
-//
-// Adapted from
-// https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/rp64_256/mod.rs#L335-L369
-static inline std::array<ff::ff_avx_t, 3>
-apply_inv_sbox(std::array<ff::ff_avx_t, 3> state)
-{
-  const auto t1_0 = state[0] * state[0];
-  const auto t1_1 = state[1] * state[1];
-  const auto t1_2 = state[2] * state[2];
-
-  const auto t2_0 = t1_0 * t1_0;
-  const auto t2_1 = t1_1 * t1_1;
-  const auto t2_2 = t1_2 * t1_2;
-  const std::array<ff::ff_avx_t, 3> t2{ t2_0, t2_1, t2_2 };
-
-  const auto t3 = exp_acc<3>(t2, t2);
-  const auto t4 = exp_acc<6>(t3, t3);
-  const auto t5 = exp_acc<12>(t4, t4);
-  const auto t6 = exp_acc<6>(t5, t3);
-  const auto t7 = exp_acc<31>(t6, t6);
-
-  const auto a0_0 = t7[0] * t7[0];
-  const auto a0_1 = t7[1] * t7[1];
-  const auto a0_2 = t7[2] * t7[2];
-
-  const auto a1_0 = a0_0 * t6[0];
-  const auto a1_1 = a0_1 * t6[1];
-  const auto a1_2 = a0_2 * t6[2];
-
-  const auto a2_0 = a1_0 * a1_0;
-  const auto a2_1 = a1_1 * a1_1;
-  const auto a2_2 = a1_2 * a1_2;
-
-  const auto a3_0 = a2_0 * a2_0;
-  const auto a3_1 = a2_1 * a2_1;
-  const auto a3_2 = a2_2 * a2_2;
-
-  const auto b0_0 = t1_0 * t2_0;
-  const auto b0_1 = t1_1 * t2_1;
-  const auto b0_2 = t1_2 * t2_2;
-
-  const auto b1_0 = b0_0 * state[0];
-  const auto b1_1 = b0_1 * state[1];
-  const auto b1_2 = b0_2 * state[2];
-
-  const auto res_0 = a3_0 * b1_0;
-  const auto res_1 = a3_1 * b1_1;
-  const auto res_2 = a3_2 * b1_2;
-
-  return { res_0, res_1, res_2 };
 }
-
-#else
 
 // Applies inverse substitution box on Rescue permutation state, by raising each
 // element to its 10540996611094048183-th power, with lesser many
@@ -363,10 +318,34 @@ apply_inv_sbox(std::array<ff::ff_avx_t, 3> state)
 //
 // Adapted from
 // https://github.com/novifinancial/winterfell/blob/437dc08/crypto/src/hash/rescue/rp64_256/mod.rs#L335-L369
+//
+// Starting address of the Rescue permutation state must be aligned to 32 -bytes
+// boundary, otherwise program will panic !
 static inline void
 apply_inv_sbox(ff::ff_t* const state)
 {
-  ff::ff_t t1[STATE_WIDTH];
+  alignas(32) ff::ff_t t1[STATE_WIDTH];
+  alignas(32) ff::ff_t t2[STATE_WIDTH];
+
+#if defined __AVX2__ && USE_AVX2 != 0
+
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
+  for (size_t i = 0; i < 3; i++) {
+    const size_t off = i * 4;
+
+    const ff::ff_avx_t s0{ state + off };
+    const auto s1 = s0 * s0;
+    const auto s2 = s1 * s1;
+
+    s1.store(t1 + off);
+    s2.store(t2 + off);
+  }
+
+#else
 
 #if defined __GNUC__
 #pragma GCC unroll 12
@@ -375,33 +354,54 @@ apply_inv_sbox(ff::ff_t* const state)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     t1[i] = state[i] * state[i];
-  }
-
-  ff::ff_t t2[STATE_WIDTH];
-
-#if defined __GNUC__
-#pragma GCC unroll 12
-#elif defined __clang__
-#pragma unroll 12
-#endif
-  for (size_t i = 0; i < STATE_WIDTH; i++) {
     t2[i] = t1[i] * t1[i];
   }
 
-  ff::ff_t t3[STATE_WIDTH];
+#endif
+
+  alignas(32) ff::ff_t t3[STATE_WIDTH];
   exp_acc<3>(t2, t2, t3);
 
-  ff::ff_t t4[STATE_WIDTH];
+  alignas(32) ff::ff_t t4[STATE_WIDTH];
   exp_acc<6>(t3, t3, t4);
 
-  ff::ff_t t5[STATE_WIDTH];
+  alignas(32) ff::ff_t t5[STATE_WIDTH];
   exp_acc<12>(t4, t4, t5);
 
-  ff::ff_t t6[STATE_WIDTH];
+  alignas(32) ff::ff_t t6[STATE_WIDTH];
   exp_acc<6>(t5, t3, t6);
 
-  ff::ff_t t7[STATE_WIDTH];
+  alignas(32) ff::ff_t t7[STATE_WIDTH];
   exp_acc<31>(t6, t6, t7);
+
+#if defined __AVX2__ && USE_AVX2 != 0
+
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
+  for (size_t i = 0; i < 3; i++) {
+    const size_t off = i * 4;
+
+    const ff::ff_avx_t s0{ t7 + off };
+    const auto s1 = s0 * s0;
+    const ff::ff_avx_t s2{ t6 + off };
+    const auto s3 = s1 * s2;
+    const auto s4 = s3 * s3;
+    const auto s5 = s4 * s4;
+
+    const ff::ff_avx_t s6{ t1 + off };
+    const ff::ff_avx_t s7{ t2 + off };
+    const auto s8 = s6 * s7;
+    const ff::ff_avx_t s9{ state + off };
+    const auto s10 = s8 * s9;
+
+    const auto s11 = s5 * s10;
+    s11.store(state + off);
+  }
+
+#else
 
 #if defined __GNUC__
 #pragma GCC unroll 12
@@ -419,59 +419,38 @@ apply_inv_sbox(ff::ff_t* const state)
 
     state[i] = a3 * b1;
   }
-}
 
 #endif
-
-#if defined __AVX2__ && USE_AVX2 != 0
-
-// Uses AVX2 intrinsics for adding round constants to Rescue permutation state.
-//
-// Note this routine is used during the first half of Rescue permutation.
-static inline std::array<ff::ff_avx_t, 3>
-add_rc0(std::array<ff::ff_avx_t, 3> state, const size_t ridx)
-{
-  const size_t rc_off = ridx * STATE_WIDTH;
-
-  const ff::ff_avx_t rc0{ RC0 + rc_off + 0ul };
-  const ff::ff_avx_t rc1{ RC0 + rc_off + 4ul };
-  const ff::ff_avx_t rc2{ RC0 + rc_off + 8ul };
-
-  const auto t0 = state[0] + rc0;
-  const auto t1 = state[1] + rc1;
-  const auto t2 = state[2] + rc2;
-
-  return { t0, t1, t2 };
 }
-
-// Uses AVX2 intrinsics for adding round constants to Rescue permutation state.
-//
-// Note this routine is used during the last half of Rescue permutation.
-static inline std::array<ff::ff_avx_t, 3>
-add_rc1(std::array<ff::ff_avx_t, 3> state, const size_t ridx)
-{
-  const size_t rc_off = ridx * STATE_WIDTH;
-
-  const ff::ff_avx_t rc0{ RC1 + rc_off + 0ul };
-  const ff::ff_avx_t rc1{ RC1 + rc_off + 4ul };
-  const ff::ff_avx_t rc2{ RC1 + rc_off + 8ul };
-
-  const auto t0 = state[0] + rc0;
-  const auto t1 = state[1] + rc1;
-  const auto t2 = state[2] + rc2;
-
-  return { t0, t1, t2 };
-}
-
-#else
 
 // Adds round constants to Rescue permutation state.
 //
 // Note this routine is used during the first half of Rescue permutation.
+//
+// Starting address of the Rescue permutation state must be aligned to 32 -bytes
+// boundary, otherwise program will panic !
 static inline void
 add_rc0(ff::ff_t* const state, const size_t ridx)
 {
   const size_t rc_off = ridx * STATE_WIDTH;
+
+#if defined __AVX2__ && USE_AVX2 != 0
+
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
+  for (size_t i = 0; i < 3; i++) {
+    const size_t off = i * 4;
+
+    const ff::ff_avx_t s0{ state + off };
+    const ff::ff_avx_t s1{ RC0 + rc_off + off };
+    const auto s2 = s0 + s1;
+    s2.store(state + off);
+  }
+
+#else
 
 #if defined __GNUC__
 #pragma GCC unroll 12
@@ -481,15 +460,38 @@ add_rc0(ff::ff_t* const state, const size_t ridx)
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] = state[i] + RC0[rc_off + i];
   }
+
+#endif
 }
 
 // Adds round constants to Rescue permutation state.
 //
 // Note this routine is used during the last half of Rescue permutation.
+//
+// Starting address of the Rescue permutation state must be aligned to 32 -bytes
+// boundary, otherwise program will panic !
 static inline void
 add_rc1(ff::ff_t* const state, const size_t ridx)
 {
   const size_t rc_off = ridx * STATE_WIDTH;
+
+#if defined __AVX2__ && USE_AVX2 != 0
+
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
+  for (size_t i = 0; i < 3; i++) {
+    const size_t off = i * 4;
+
+    const ff::ff_avx_t s0{ state + off };
+    const ff::ff_avx_t s1{ RC1 + rc_off + off };
+    const auto s2 = s0 + s1;
+    s2.store(state + off);
+  }
+
+#else
 
 #if defined __GNUC__
 #pragma GCC unroll 12
@@ -499,56 +501,11 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] = state[i] + RC1[rc_off + i];
   }
-}
 
 #endif
+}
 
 #if defined __AVX2__ && USE_AVX2 != 0
-
-// Given that MDS matrix is a circulant one, current row which is supposed to be
-// multiplied with Rescue state can be used for computing the next row by
-// rotating AVX2 vector lanes rightwards by 1 place - that's exactly what this
-// routine does i.e. given current MDS matrix row, it computes the next one.
-//
-// More on circulant matrix https://en.wikipedia.org/wiki/Circulant_matrix
-static inline std::array<ff::ff_avx_t, 3>
-compute_next_mds_row(std::array<ff::ff_avx_t, 3> row)
-{
-  const auto t0 = _mm256_permute4x64_epi64(row[0].v, 0b10010011);
-  const auto t1 = _mm256_permute4x64_epi64(row[1].v, 0b10010011);
-  const auto t2 = _mm256_permute4x64_epi64(row[2].v, 0b10010011);
-
-  const auto res0 = _mm256_blend_epi32(t0, t2, 0b00000011);
-  const auto res1 = _mm256_blend_epi32(t0, t1, 0b11111100);
-  const auto res2 = _mm256_blend_epi32(t1, t2, 0b11111100);
-
-  return { res0, res1, res2 };
-}
-
-// Given Rescue state array and MDS matrix row, in AVX2 registers, this routine
-// performs element wise multiplication and adds resulting lanes ( 12 of them )
-// s.t. it produces 4 lanes i.e. stored in a single AVX2 256 -bit register.
-//
-// To give some more insight into how it's done
-//
-// t0[0..4) = state[0..4) * row[0..4)
-// t1[0..4) = state[4..8) * row[4..8)
-// t2[0..4) = state[8..12) * row[8..12)
-//
-// res[0..4) = t0[0..4) + t1[0..4) + t2[0..4)
-static inline ff::ff_avx_t
-mul_state_by_row(std::array<ff::ff_avx_t, 3> state,
-                 std::array<ff::ff_avx_t, 3> row)
-{
-  const auto res0 = state[0] * row[0];
-  const auto res1 = state[1] * row[1];
-  const auto res2 = state[2] * row[2];
-
-  const auto tmp = res0 + res1;
-  const auto res = tmp + res2;
-
-  return res;
-}
 
 // Given a 256 -bit AVX2 register holding four elements ∈ Z_q, this routine
 // accumulates all four lanes into each of four resulting lanes, over Z_q
@@ -577,96 +534,104 @@ accumulate_lanes(const ff::ff_avx_t vec)
   return t5;
 }
 
-// Uses AVX2 intrinsics for multiplying Rescue permutation state by MDS matrix
-static inline std::array<ff::ff_avx_t, 3>
-apply_mds(std::array<ff::ff_avx_t, 3> state)
-{
-  const std::array<ff::ff_avx_t, 3> mds_row0{ MDS + 0ul, MDS + 4ul, MDS + 8ul };
-
-  const auto t0 = mul_state_by_row(state, mds_row0);
-  const auto t1 = accumulate_lanes(t0);
-
-  const auto mds_row1 = compute_next_mds_row(mds_row0);
-  const auto t2 = mul_state_by_row(state, mds_row1);
-  const auto t3 = accumulate_lanes(t2);
-
-  // state[0], state[1], _, _
-  const auto r0 = _mm256_blend_epi32(t1.v, t3.v, 0b00001100);
-
-  const auto mds_row2 = compute_next_mds_row(mds_row1);
-  const auto t4 = mul_state_by_row(state, mds_row2);
-  const auto t5 = accumulate_lanes(t4);
-
-  // state[0], state[1], state[2], _
-  const auto r1 = _mm256_blend_epi32(r0, t5.v, 0b00110000);
-
-  const auto mds_row3 = compute_next_mds_row(mds_row2);
-  const auto t6 = mul_state_by_row(state, mds_row3);
-  const auto t7 = accumulate_lanes(t6);
-
-  // state[0], state[1], state[2], state[3]
-  const auto r2 = _mm256_blend_epi32(r1, t7.v, 0b11000000);
-
-  const auto mds_row4 = compute_next_mds_row(mds_row3);
-  const auto t8 = mul_state_by_row(state, mds_row4);
-  const auto t9 = accumulate_lanes(t8);
-
-  const auto mds_row5 = compute_next_mds_row(mds_row4);
-  const auto t10 = mul_state_by_row(state, mds_row5);
-  const auto t11 = accumulate_lanes(t10);
-
-  // state[4], state[5], _, _
-  const auto r3 = _mm256_blend_epi32(t9.v, t11.v, 0b00001100);
-
-  const auto mds_row6 = compute_next_mds_row(mds_row5);
-  const auto t12 = mul_state_by_row(state, mds_row6);
-  const auto t13 = accumulate_lanes(t12);
-
-  // state[4], state[5], state[6], _
-  const auto r4 = _mm256_blend_epi32(r3, t13.v, 0b00110000);
-
-  const auto mds_row7 = compute_next_mds_row(mds_row6);
-  const auto t14 = mul_state_by_row(state, mds_row7);
-  const auto t15 = accumulate_lanes(t14);
-
-  // state[4], state[5], state[6], state[7]
-  const auto r5 = _mm256_blend_epi32(r4, t15.v, 0b11000000);
-
-  const auto mds_row8 = compute_next_mds_row(mds_row7);
-  const auto t16 = mul_state_by_row(state, mds_row8);
-  const auto t17 = accumulate_lanes(t16);
-
-  const auto mds_row9 = compute_next_mds_row(mds_row8);
-  const auto t18 = mul_state_by_row(state, mds_row9);
-  const auto t19 = accumulate_lanes(t18);
-
-  // state[8], state[9], _, _
-  const auto r6 = _mm256_blend_epi32(t17.v, t19.v, 0b00001100);
-
-  const auto mds_row10 = compute_next_mds_row(mds_row9);
-  const auto t20 = mul_state_by_row(state, mds_row10);
-  const auto t21 = accumulate_lanes(t20);
-
-  // state[8], state[9], state[10], _
-  const auto r7 = _mm256_blend_epi32(r6, t21.v, 0b00110000);
-
-  const auto mds_row11 = compute_next_mds_row(mds_row10);
-  const auto t22 = mul_state_by_row(state, mds_row11);
-  const auto t23 = accumulate_lanes(t22);
-
-  // state[8], state[9], state[10], state[11]
-  const auto r8 = _mm256_blend_epi32(r7, t23.v, 0b11000000);
-
-  return { r2, r5, r8 };
-}
-
-#else
+#endif
 
 // Multiplies Rescue permutation state by MDS matrix
+//
+// Starting address of the Rescue permutation state must be aligned to 32 -bytes
+// boundary, otherwise program will panic !
 static inline void
 apply_mds(ff::ff_t* const state)
 {
-  ff::ff_t tmp[STATE_WIDTH]{};
+  alignas(32) ff::ff_t tmp[STATE_WIDTH]{};
+
+#if defined __AVX2__ && USE_AVX2 != 0
+
+  for (size_t i = 0; i < 3; i++) {
+    const size_t soff = i * 4;
+
+    const ff::ff_avx_t s0{ state + 0 };
+    const ff::ff_avx_t s1{ state + 4 };
+    const ff::ff_avx_t s2{ state + 8 };
+
+    // ----------------------------------------------
+
+    const size_t mdsoff0 = (soff + 0) * STATE_WIDTH;
+
+    const ff::ff_avx_t mds0_0{ MDS + mdsoff0 + 0 };
+    const ff::ff_avx_t mds0_1{ MDS + mdsoff0 + 4 };
+    const ff::ff_avx_t mds0_2{ MDS + mdsoff0 + 8 };
+
+    const auto t0_0 = s0 * mds0_0;
+    const auto t0_1 = s1 * mds0_1;
+    const auto t0_2 = s2 * mds0_2;
+
+    const auto t0_3 = t0_0 + t0_1;
+    const auto t0_4 = t0_2 + t0_3;
+
+    const auto t0_5 = accumulate_lanes(t0_4);
+
+    // ------------------------------------------------
+
+    const size_t mdsoff1 = (soff + 1) * STATE_WIDTH;
+
+    const ff::ff_avx_t mds1_0{ MDS + mdsoff1 + 0 };
+    const ff::ff_avx_t mds1_1{ MDS + mdsoff1 + 4 };
+    const ff::ff_avx_t mds1_2{ MDS + mdsoff1 + 8 };
+
+    const auto t1_0 = s0 * mds1_0;
+    const auto t1_1 = s1 * mds1_1;
+    const auto t1_2 = s2 * mds1_2;
+
+    const auto t1_3 = t1_0 + t1_1;
+    const auto t1_4 = t1_2 + t1_3;
+
+    const auto t1_5 = accumulate_lanes(t1_4);
+
+    // -------------------------------------------------
+
+    const size_t mdsoff2 = (soff + 2) * STATE_WIDTH;
+
+    const ff::ff_avx_t mds2_0{ MDS + mdsoff2 + 0 };
+    const ff::ff_avx_t mds2_1{ MDS + mdsoff2 + 4 };
+    const ff::ff_avx_t mds2_2{ MDS + mdsoff2 + 8 };
+
+    const auto t2_0 = s0 * mds2_0;
+    const auto t2_1 = s1 * mds2_1;
+    const auto t2_2 = s2 * mds2_2;
+
+    const auto t2_3 = t2_0 + t2_1;
+    const auto t2_4 = t2_2 + t2_3;
+
+    const auto t2_5 = accumulate_lanes(t2_4);
+
+    // -------------------------------------------------
+
+    const size_t mdsoff3 = (soff + 3) * STATE_WIDTH;
+
+    const ff::ff_avx_t mds3_0{ MDS + mdsoff3 + 0 };
+    const ff::ff_avx_t mds3_1{ MDS + mdsoff3 + 4 };
+    const ff::ff_avx_t mds3_2{ MDS + mdsoff3 + 8 };
+
+    const auto t3_0 = s0 * mds3_0;
+    const auto t3_1 = s1 * mds3_1;
+    const auto t3_2 = s2 * mds3_2;
+
+    const auto t3_3 = t3_0 + t3_1;
+    const auto t3_4 = t3_2 + t3_3;
+
+    const auto t3_5 = accumulate_lanes(t3_4);
+
+    // -------------------------------------------------
+
+    const auto res0 = _mm256_blend_epi32(t0_5.v, t1_5.v, 0b00001100);
+    const auto res1 = _mm256_blend_epi32(res0, t2_5.v, 0b00110000);
+    const auto res2 = _mm256_blend_epi32(res1, t3_5.v, 0b11000000);
+
+    _mm256_store_si256((__m256i*)(tmp + soff), res2);
+  }
+
+#else
 
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     const size_t off = i * STATE_WIDTH;
@@ -681,52 +646,10 @@ apply_mds(ff::ff_t* const state)
     }
   }
 
-  std::memcpy(state, tmp, sizeof(tmp));
-}
-
 #endif
 
-#if defined __AVX2__ && USE_AVX2 != 0
-
-// Apply single Rescue permutation round, using AVX2 intrinsics
-static inline std::array<ff::ff_avx_t, 3>
-apply_round(std::array<ff::ff_avx_t, 3> state, const size_t ridx)
-{
-  // first half
-  const auto t0 = apply_sbox(state);
-  const auto t1 = apply_mds(t0);
-  const auto t2 = add_rc0(t1, ridx);
-
-  // second half
-  const auto t3 = apply_inv_sbox(t2);
-  const auto t4 = apply_mds(t3);
-  const auto t5 = add_rc1(t4, ridx);
-
-  return t5;
+  std::memcpy(state, tmp, sizeof(tmp));
 }
-
-// Applies Rescue Permutation of 7 rounds, on 32 -bytes aligned state array,
-// which is 12 field elements ( i.e. Z_q ) wide, using AVX2 intrinsics. Final
-// permutation result is written back into same memory allocation, with starting
-// address being aligned with 32 -bytes boundary.
-//
-// Note, if starting memory address of state is not aligned with 32 -bytes
-// boundary, it'll result into a segmentation fault.
-static inline void
-permute(ff::ff_t* const state)
-{
-  std::array<ff::ff_avx_t, 3> res{ state + 0ul, state + 4ul, state + 8ul };
-
-  for (size_t i = 0; i < ROUNDS; i++) {
-    res = apply_round(res, i);
-  }
-
-  res[0].store(state + 0ul);
-  res[1].store(state + 4ul);
-  res[2].store(state + 8ul);
-}
-
-#else
 
 // Apply single Rescue permutation round
 static inline void
@@ -751,7 +674,5 @@ permute(ff::ff_t* const state)
     apply_round(state, i);
   }
 }
-
-#endif
 
 }

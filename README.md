@@ -3,7 +3,7 @@ Rescue Prime Hash Function
 
 ## Overview
 
-Arithmetization friendly hash functions i.e. a hash function which works with prime field elements instead of working with raw bits/ bytes/ N -bit words as done by general-purpose hash functions such as SHA3-256, SHA256 or BLAKE3 etc., are very much used in STARK proof systems, due to the fact that their arithmetic circuit over prime field Z_q is much easier to prove. Rescue-Prime hash function is one such arithmetization friendly hash function, which is used by Winterfell STARK prover.
+Arithmetization friendly hash functions i.e. a hash function which works with prime field elements instead of working with raw bits/ bytes/ N -bit words as used by general-purpose hash functions such as SHA3-256, SHA256 or BLAKE3 etc., are very much used in STARK proof systems, due to the fact that their arithmetic circuit over prime field Z_q is much easier to prove. Rescue-Prime hash function is one such arithmetization friendly hash function, which is used by Winterfell STARK prover.
 
 In Winterfell STARK prover, Rescue permutation is performed over prime field Z_q | q = $2^{64} - 2^{32} + 1$ i.e. the hash function exposes API of following form
 
@@ -90,7 +90,7 @@ AVX2=1 make # tests AVX2 implementation
 For benchmarking 
 
 - Rescue Permutation over Z_q | q = $2^{64} -2^{32} + 1$
-- Z_q element hasher
+- Z_q element hasher | # -of input elements ∈ {4, 8, 16, 32, 64, 128}
 
 issue following
 
@@ -101,7 +101,7 @@ make benchmark # benchmarks scalar implementation
 If your target CPU has AVX2 features, you may want to benchmark that implementation by issuing
 
 ```bash
-AVX2=1 make # benchmarks AVX2 implementation
+AVX2=1 make benchmark # benchmarks AVX2 implementation
 ```
 
 > **Note**
@@ -112,50 +112,98 @@ AVX2=1 make # benchmarks AVX2 implementation
 
 > Because most of the CPUs employ dynamic frequency boosting technique, when benchmarking routines, you may want to disable CPU frequency scaling by following [this](https://github.com/google/benchmark/blob/da652a7/docs/user_guide.md#disabling-cpu-frequency-scaling) guide.
 
-### On Intel(R) Core(TM) i5-8279U CPU @ 2.40GHz ( **Scalar** implementation compiled with Clang )
+### On Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz ( **Scalar** implementation compiled with GCC )
 
 ```bash
-2022-12-19T21:37:33+04:00
+2022-12-20T12:39:17+00:00
 Running ./bench/a.out
-Run on (8 X 2400 MHz CPU s)
+Run on (128 X 1312.71 MHz CPU s)
 CPU Caches:
-  L1 Data 32 KiB
-  L1 Instruction 32 KiB
-  L2 Unified 256 KiB (x4)
-  L3 Unified 6144 KiB
-Load Average: 1.99, 1.89, 1.87
+  L1 Data 48 KiB (x64)
+  L1 Instruction 32 KiB (x64)
+  L2 Unified 1280 KiB (x64)
+  L3 Unified 55296 KiB (x2)
+Load Average: 0.22, 0.11, 0.04
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
 Benchmark                                      Time             CPU   Iterations items_per_second max_exec_time (ns) median_exec_time (ns) min_exec_time (ns)
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
-bench_rphash::permutation/manual_time      11711 ns       137521 ns        59644       85.3871k/s           118.625k               11.562k            11.346k
-bench_rphash::hash/4/manual_time           11718 ns        53749 ns        59847       85.3373k/s             83.78k               11.568k            11.373k
-bench_rphash::hash/8/manual_time           11715 ns        95581 ns        59714       85.3587k/s            95.865k               11.578k            11.369k
-bench_rphash::hash/16/manual_time          23341 ns       191033 ns        29877       42.8427k/s            141.08k               23.088k            22.717k
-bench_rphash::hash/32/manual_time          46656 ns       381455 ns        14991       21.4337k/s           215.707k               46.097k            45.422k
-bench_rphash::hash/64/manual_time          93244 ns       761240 ns         7503       10.7246k/s            305.16k               92.089k            90.817k
-bench_rphash::hash/128/manual_time        186940 ns      1526762 ns         3750       5.34931k/s           395.294k              184.094k           181.659k
+bench_rphash::permutation/manual_time      31497 ns        43352 ns        22225       31.7489k/s            36.866k               31.484k            31.359k
+bench_rphash::hash/4/manual_time           32135 ns        36167 ns        21781       31.1185k/s            42.126k               32.123k            32.006k
+bench_rphash::hash/8/manual_time           31813 ns        39758 ns        22003       31.4342k/s            33.936k               31.801k             31.68k
+bench_rphash::hash/16/manual_time          63613 ns        79371 ns        11004         15.72k/s           100.307k               63.586k             63.39k
+bench_rphash::hash/32/manual_time         127225 ns       158622 ns         5502       7.86011k/s           158.618k               127.17k           126.914k
+bench_rphash::hash/64/manual_time         254419 ns       317107 ns         2751       3.93052k/s           268.945k               254.35k           253.972k
+bench_rphash::hash/128/manual_time        508787 ns       634438 ns         1376       1.96546k/s           511.657k              508.659k           508.175k
 ```
 
-### On Intel(R) Core(TM) i5-8279U CPU @ 2.40GHz ( **AVX2** implementation compiled with Clang )
+### On Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz ( **AVX2** implementation compiled with GCC )
 
 ```bash
-2022-12-19T21:39:09+04:00
+2022-12-20T12:40:12+00:00
 Running ./bench/a.out
-Run on (8 X 2400 MHz CPU s)
+Run on (128 X 800.524 MHz CPU s)
 CPU Caches:
-  L1 Data 32 KiB
-  L1 Instruction 32 KiB
-  L2 Unified 256 KiB (x4)
-  L3 Unified 6144 KiB
-Load Average: 0.96, 1.59, 1.76
+  L1 Data 48 KiB (x64)
+  L1 Instruction 32 KiB (x64)
+  L2 Unified 1280 KiB (x64)
+  L3 Unified 55296 KiB (x2)
+Load Average: 0.16, 0.12, 0.04
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
 Benchmark                                      Time             CPU   Iterations items_per_second max_exec_time (ns) median_exec_time (ns) min_exec_time (ns)
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
-bench_rphash::permutation/manual_time       7576 ns       133394 ns        92596       131.988k/s            99.574k                7.467k             7.341k
-bench_rphash::hash/4/manual_time            7569 ns        49631 ns        92266       132.122k/s            81.625k                7.471k             7.343k
-bench_rphash::hash/8/manual_time            7589 ns        91627 ns        91952        131.77k/s            83.479k                7.474k             7.348k
-bench_rphash::hash/16/manual_time          15058 ns       182693 ns        46561       66.4116k/s           127.783k               14.858k            14.646k
-bench_rphash::hash/32/manual_time          29973 ns       365103 ns        23340       33.3633k/s           158.505k               29.592k            29.229k
-bench_rphash::hash/64/manual_time          59811 ns       729436 ns        11739       16.7192k/s           255.018k               59.043k            58.412k
-bench_rphash::hash/128/manual_time        119664 ns      1461539 ns         5861       8.35671k/s           291.594k              117.946k            116.75k
+bench_rphash::permutation/manual_time      13741 ns        25476 ns        50939       72.7727k/s            19.977k               13.738k            13.667k
+bench_rphash::hash/4/manual_time           13758 ns        17734 ns        50882       72.6836k/s            19.871k               13.753k             13.67k
+bench_rphash::hash/8/manual_time           13752 ns        21609 ns        50898       72.7189k/s            24.249k               13.747k            13.676k
+bench_rphash::hash/16/manual_time          27480 ns        43095 ns        25472       36.3905k/s             31.38k               27.472k            27.364k
+bench_rphash::hash/32/manual_time          54943 ns        86061 ns        12741       18.2006k/s            64.596k               54.923k            54.779k
+bench_rphash::hash/64/manual_time         109851 ns       172031 ns         6371       9.10323k/s           113.356k              109.824k           109.642k
+bench_rphash::hash/128/manual_time        219686 ns       344632 ns         3186       4.55195k/s           223.527k               219.63k           219.317k
+```
+
+### On Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz ( **Scalar** implementation compiled with Clang )
+
+```bash
+2022-12-20T12:41:18+00:00
+Running ./bench/a.out
+Run on (128 X 1274.66 MHz CPU s)
+CPU Caches:
+  L1 Data 48 KiB (x64)
+  L1 Instruction 32 KiB (x64)
+  L2 Unified 1280 KiB (x64)
+  L3 Unified 55296 KiB (x2)
+Load Average: 0.11, 0.12, 0.05
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+Benchmark                                      Time             CPU   Iterations items_per_second max_exec_time (ns) median_exec_time (ns) min_exec_time (ns)
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+bench_rphash::permutation/manual_time      10723 ns        23808 ns        65285       93.2596k/s            17.495k               10.718k            10.636k
+bench_rphash::hash/4/manual_time           10723 ns        15157 ns        65284       93.2552k/s            20.942k                10.72k             10.64k
+bench_rphash::hash/8/manual_time           10725 ns        19487 ns        65275       93.2367k/s            16.557k               10.722k            10.642k
+bench_rphash::hash/16/manual_time          21434 ns        38842 ns        32652       46.6538k/s            30.348k               21.428k            21.317k
+bench_rphash::hash/32/manual_time          42832 ns        77525 ns        16343       23.3468k/s            48.002k               42.819k            42.645k
+bench_rphash::hash/64/manual_time          85622 ns       154866 ns         8175       11.6793k/s                90k               85.596k            85.362k
+bench_rphash::hash/128/manual_time        171201 ns       309544 ns         4089        5.8411k/s           174.509k              171.158k           170.811k
+```
+
+### On Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz ( **AVX2** implementation compiled with Clang )
+
+```bash
+2022-12-20T12:42:08+00:00
+Running ./bench/a.out
+Run on (128 X 1193.04 MHz CPU s)
+CPU Caches:
+  L1 Data 48 KiB (x64)
+  L1 Instruction 32 KiB (x64)
+  L2 Unified 1280 KiB (x64)
+  L3 Unified 55296 KiB (x2)
+Load Average: 0.17, 0.14, 0.06
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+Benchmark                                      Time             CPU   Iterations items_per_second max_exec_time (ns) median_exec_time (ns) min_exec_time (ns)
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+bench_rphash::permutation/manual_time       9890 ns        23015 ns        70776       101.114k/s            12.859k                9.887k             9.822k
+bench_rphash::hash/4/manual_time            9900 ns        14329 ns        70708        101.01k/s            90.445k                9.895k             9.818k
+bench_rphash::hash/8/manual_time            9899 ns        18657 ns        70717       101.019k/s            25.879k                9.896k             9.823k
+bench_rphash::hash/16/manual_time          19768 ns        37182 ns        35407       50.5873k/s             23.27k               19.762k            19.648k
+bench_rphash::hash/32/manual_time          39503 ns        74213 ns        17720       25.3145k/s            69.901k               39.491k            39.348k
+bench_rphash::hash/64/manual_time          78971 ns       148260 ns         8865       12.6629k/s            83.093k               78.949k            78.775k
+bench_rphash::hash/128/manual_time        157925 ns       296371 ns         4432       6.33214k/s            183.93k              157.873k           157.635k
 ```
