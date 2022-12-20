@@ -1,14 +1,12 @@
 #pragma once
 
-#include <immintrin.h>
+#include <cstring>
 #if defined __AVX2__ && USE_AVX2 != 0
 #pragma message("Using AVX2 for Rescue permutation")
 
 #include "ff_avx.hpp"
-#include <array>
 #else
 #include "ff.hpp"
-#include <cstring>
 #endif
 
 // Rescue Permutation over prime field Z_q, q = 2^64 - 2^32 + 1
