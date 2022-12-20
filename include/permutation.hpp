@@ -220,6 +220,11 @@ exp_acc(const ff::ff_t* const base,
 
 #if defined __AVX2__ && USE_AVX2 != 0
 
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
     for (size_t j = 0; j < 3; j++) {
       const size_t off = j * 4;
 
@@ -244,6 +249,11 @@ exp_acc(const ff::ff_t* const base,
 
 #if defined __AVX2__ && USE_AVX2 != 0
 
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
   for (size_t i = 0; i < 3; i++) {
     const size_t off = i * 4;
 
@@ -277,6 +287,11 @@ apply_sbox(ff::ff_t* const state)
 {
 #if defined __AVX2__ && USE_AVX2 != 0
 
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
   for (size_t i = 0; i < 3; i++) {
     const size_t off = i * 4;
 
@@ -312,15 +327,24 @@ static inline void
 apply_inv_sbox(ff::ff_t* const state)
 {
   alignas(32) ff::ff_t t1[STATE_WIDTH];
+  alignas(32) ff::ff_t t2[STATE_WIDTH];
 
 #if defined __AVX2__ && USE_AVX2 != 0
 
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
   for (size_t i = 0; i < 3; i++) {
     const size_t off = i * 4;
 
     const ff::ff_avx_t s0{ state + off };
     const auto s1 = s0 * s0;
+    const auto s2 = s1 * s1;
+
     s1.store(t1 + off);
+    s2.store(t2 + off);
   }
 
 #else
@@ -332,30 +356,6 @@ apply_inv_sbox(ff::ff_t* const state)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     t1[i] = state[i] * state[i];
-  }
-
-#endif
-
-  alignas(32) ff::ff_t t2[STATE_WIDTH];
-
-#if defined __AVX2__ && USE_AVX2 != 0
-
-  for (size_t i = 0; i < 3; i++) {
-    const size_t off = i * 4;
-
-    const ff::ff_avx_t s0{ t1 + off };
-    const auto s1 = s0 * s0;
-    s1.store(t2 + off);
-  }
-
-#else
-
-#if defined __GNUC__
-#pragma GCC unroll 12
-#elif defined __clang__
-#pragma unroll 12
-#endif
-  for (size_t i = 0; i < STATE_WIDTH; i++) {
     t2[i] = t1[i] * t1[i];
   }
 
@@ -378,6 +378,11 @@ apply_inv_sbox(ff::ff_t* const state)
 
 #if defined __AVX2__ && USE_AVX2 != 0
 
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
   for (size_t i = 0; i < 3; i++) {
     const size_t off = i * 4;
 
@@ -433,6 +438,11 @@ add_rc0(ff::ff_t* const state, const size_t ridx)
 
 #if defined __AVX2__ && USE_AVX2 != 0
 
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
   for (size_t i = 0; i < 3; i++) {
     const size_t off = i * 4;
 
@@ -469,6 +479,11 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
 
 #if defined __AVX2__ && USE_AVX2 != 0
 
+#if defined __GNUC__
+#pragma GCC unroll 3
+#elif defined __clang__
+#pragma unroll 3
+#endif
   for (size_t i = 0; i < 3; i++) {
     const size_t off = i * 4;
 
@@ -493,26 +508,6 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
 }
 
 #if defined __AVX2__ && USE_AVX2 != 0
-
-// Given that MDS matrix is a circulant one, current row which is supposed to be
-// multiplied with Rescue state can be used for computing the next row by
-// rotating AVX2 vector lanes rightwards by 1 place - that's exactly what this
-// routine does i.e. given current MDS matrix row, it computes the next one.
-//
-// More on circulant matrix https://en.wikipedia.org/wiki/Circulant_matrix
-static inline std::array<ff::ff_avx_t, 3>
-compute_next_mds_row(std::array<ff::ff_avx_t, 3> row)
-{
-  const auto t0 = _mm256_permute4x64_epi64(row[0].v, 0b10010011);
-  const auto t1 = _mm256_permute4x64_epi64(row[1].v, 0b10010011);
-  const auto t2 = _mm256_permute4x64_epi64(row[2].v, 0b10010011);
-
-  const auto res0 = _mm256_blend_epi32(t0, t2, 0b00000011);
-  const auto res1 = _mm256_blend_epi32(t0, t1, 0b11111100);
-  const auto res2 = _mm256_blend_epi32(t1, t2, 0b11111100);
-
-  return { res0, res1, res2 };
-}
 
 // Given a 256 -bit AVX2 register holding four elements ∈ Z_q, this routine
 // accumulates all four lanes into each of four resulting lanes, over Z_q
