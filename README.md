@@ -112,6 +112,10 @@ AVX2=1 make benchmark # benchmarks AVX2 implementation
 
 > Because most of the CPUs employ dynamic frequency boosting technique, when benchmarking routines, you may want to disable CPU frequency scaling by following [this](https://github.com/google/benchmark/blob/da652a7/docs/user_guide.md#disabling-cpu-frequency-scaling) guide.
 
+> **Note** If you have trouble interpreting following benchmark results, see this annotated screen capture.
+
+![how_to_interpret_benchmark?](./bench/rescue_prime_bench_annotation.png)
+
 ### On Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz ( **Scalar** implementation compiled with GCC )
 
 ```bash
