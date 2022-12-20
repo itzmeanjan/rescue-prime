@@ -3,7 +3,7 @@ Rescue Prime Hash Function
 
 ## Overview
 
-Arithmetization friendly hash functions i.e. a hash function which works with prime field elements instead of working with raw bits/ bytes/ N -bit words as done by general-purpose hash functions such as SHA3-256, SHA256 or BLAKE3 etc., are very much used in STARK proof systems, due to the fact that their arithmetic circuit over prime field Z_q is much easier to prove. Rescue-Prime hash function is one such arithmetization friendly hash function, which is used by Winterfell STARK prover.
+Arithmetization friendly hash functions i.e. a hash function which works with prime field elements instead of working with raw bits/ bytes/ N -bit words as used by general-purpose hash functions such as SHA3-256, SHA256 or BLAKE3 etc., are very much used in STARK proof systems, due to the fact that their arithmetic circuit over prime field Z_q is much easier to prove. Rescue-Prime hash function is one such arithmetization friendly hash function, which is used by Winterfell STARK prover.
 
 In Winterfell STARK prover, Rescue permutation is performed over prime field Z_q | q = $2^{64} - 2^{32} + 1$ i.e. the hash function exposes API of following form
 
@@ -90,7 +90,7 @@ AVX2=1 make # tests AVX2 implementation
 For benchmarking 
 
 - Rescue Permutation over Z_q | q = $2^{64} -2^{32} + 1$
-- Z_q element hasher
+- Z_q element hasher | # -of input elements ∈ {4, 8, 16, 32, 64, 128}
 
 issue following
 
@@ -101,7 +101,7 @@ make benchmark # benchmarks scalar implementation
 If your target CPU has AVX2 features, you may want to benchmark that implementation by issuing
 
 ```bash
-AVX2=1 make # benchmarks AVX2 implementation
+AVX2=1 make benchmark # benchmarks AVX2 implementation
 ```
 
 > **Note**
