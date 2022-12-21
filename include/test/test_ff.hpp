@@ -1,6 +1,7 @@
 #pragma once
 #include "ff.hpp"
 #include "ff_avx.hpp"
+#include "ff_neon.hpp"
 #include <cassert>
 
 // Test functional correctness of Rescue Prime implementation
