@@ -20,6 +20,24 @@ constexpr uint64_t Q = 0xffffffff00000001ul;
 inline constexpr std::pair<uint64_t, uint64_t>
 full_mul_u64(const uint64_t lhs, const uint64_t rhs)
 {
+#if defined __aarch64__ && __SIZEOF_INT128__ == 16
+  // Benchmark results show that only on aarch64 CPU, if __int128 is supported
+  // by the compiler, it outperforms `else` code block, where manually high and
+  // low 64 -bit limbs are computed.
+
+  using uint128_t = unsigned __int128;
+
+  const auto a = static_cast<uint128_t>(lhs);
+  const auto b = static_cast<uint128_t>(rhs);
+  const auto c = a * b;
+
+  return std::make_pair(static_cast<uint64_t>(c >> 64),
+                        static_cast<uint64_t>(c));
+
+#else
+  // On x86_64 targets, following code block always performs better than above
+  // code block - as per benchmark results.
+
   const uint64_t lhs_hi = lhs >> 32;
   const uint64_t lhs_lo = lhs & 0xfffffffful;
 
@@ -47,6 +65,8 @@ full_mul_u64(const uint64_t lhs, const uint64_t rhs)
   const uint64_t res_lo = lo + (mid0_lo << 32) + (mid1_lo << 32);
 
   return std::make_pair(res_hi, res_lo);
+
+#endif
 }
 
 // An element of prime field Z_q | q = 2^64 - 2^32 + 1, with arithmetic
