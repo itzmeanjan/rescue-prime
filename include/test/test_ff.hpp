@@ -111,7 +111,7 @@ test_avx_mod_add()
 // scalar implementation.
 template<const size_t rounds = 256ul>
 void
-test_u64_full_mul()
+test_avx_full_mul()
 {
   static_assert(rounds > 0, "Round must not be = 0 !");
 
@@ -246,6 +246,88 @@ test_neon_mod_add()
   // finally ensure both implementations produce same result.
   for (size_t i = 0; i < 2 * rounds; i++) {
     assert(computed_res[i] == expected_res[i]);
+  }
+}
+
+// Ensure that vectorized u64 x u64 -> u128, multiplication using NEON
+// intrinsics, is correctly implemented, by checking computed results against
+// scalar implementation.
+template<const size_t rounds = 256ul>
+void
+test_neon_full_mul()
+{
+  static_assert(rounds > 0, "Round must not be = 0 !");
+
+  std::random_device rd;
+  std::mt19937_64 gen(rd());
+  std::uniform_int_distribution<uint64_t> dis{};
+
+  alignas(32) uint64_t arr0[2 * rounds];
+  alignas(32) uint64_t arr1[2 * rounds];
+  alignas(32) uint64_t computed_res_hi[2 * rounds];
+  alignas(32) uint64_t computed_res_lo[2 * rounds];
+  alignas(32) uint64_t expected_res_hi[2 * rounds];
+  alignas(32) uint64_t expected_res_lo[2 * rounds];
+
+  // generate some random u64s
+  for (size_t i = 0; i < 2 * rounds; i++) {
+    arr0[i] = dis(gen);
+    arr1[i] = dis(gen);
+  }
+
+  // compute full multiplication of two u64s, resulting into high and low
+  // 64 -bit halves
+  for (size_t i = 0; i < 2 * rounds; i++) {
+    const auto res = ff::full_mul_u64(arr0[i], arr1[i]);
+
+    expected_res_hi[i] = res.first;
+    expected_res_lo[i] = res.second;
+  }
+
+  // compute full mutliplication of two u64s, resulting into high and low
+  // 64 -bit halves, using NEON implementation
+  for (size_t i = 0; i < rounds; i++) {
+    const size_t off = i * 2;
+
+    const auto a = vld1q_u64(arr0 + off);
+    const auto b = vld1q_u64(arr1 + off);
+
+    const auto res = ff::full_mul_u64x2(a, b);
+
+    vst1q_u64(computed_res_hi + off, res.first);
+    vst1q_u64(computed_res_lo + off, res.second);
+  }
+
+  // finally ensure both implementations produce same result.
+  //
+  // Following assertions are written that way because of how NEON intrinsics
+  // load data from memory place them on register. For example
+  //
+  // Assume we're working with following array
+  //
+  // const uint64_t data[2]{0, 1};
+  //
+  // That array can be used for constructing a 128 -bit NEON register with two
+  // 64 -bit limbs, by issuing
+  //
+  // const uint64x2_t reg = vld1q_u64(data);
+  //
+  // If one inspects how that data is laid on 128 -bit register, it'll look like
+  //
+  // |<------ data[1] ------->|<----- data[0] ----->|
+  // |<--- high 64 -bits --->|<--- low 64 -bits --->|
+  // |<--------- 128 -bit NEON register ----------->|
+  //
+  // Which reverses order of array elements on 128 -bit register ( i.e. reg ),
+  // so result computed by `ff::full_mul_u64x2` routine is also flipped.
+  for (size_t i = 0; i < rounds; i++) {
+    const size_t off = i * 2;
+
+    assert(computed_res_hi[off + 0] == expected_res_hi[off + 1]);
+    assert(computed_res_hi[off + 1] == expected_res_hi[off + 0]);
+
+    assert(computed_res_lo[off + 0] == expected_res_lo[off + 1]);
+    assert(computed_res_lo[off + 1] == expected_res_lo[off + 0]);
   }
 }
 
