@@ -1,12 +1,21 @@
 #pragma once
 
 #include <cstring>
-#if defined __AVX2__ && USE_AVX2 != 0
-#pragma message("Using AVX2 for Rescue permutation")
 
+#if defined __AVX2__ && USE_AVX2 != 0
+
+#pragma message("Using AVX2 for Rescue permutation")
 #include "ff_avx.hpp"
+
+#elif defined __ARM_NEON && USE_NEON != 0
+
+#pragma message("Using NEON for Rescue permutation")
+#include "ff_neon.hpp"
+
 #else
+
 #include "ff.hpp"
+
 #endif
 
 // Rescue Permutation over prime field Z_q, q = 2^64 - 2^32 + 1
@@ -162,14 +171,33 @@ alignas(32) constexpr ff::ff_t RC1[ROUNDS * STATE_WIDTH]{
 
 #if defined __AVX2__ && USE_AVX2 != 0
 
-// Uses vector instrinsics for raising four elements ∈ Z_q to their 7-th power,
-// by using less multiplications, than one would do if done using standard
-// exponentiation routine.
+// Uses AVX2 vector instrinsics for raising four elements ∈ Z_q to their 7-th
+// power, by using less multiplications, than one would do if done using
+// standard exponentiation routine.
 //
 // Adapted from
 // https://github.com/novifinancial/winterfell/blob/437dc08/math/src/field/f64/mod.rs#L74-L82
 static inline ff::ff_avx_t
 exp7(const ff::ff_avx_t v)
+{
+  const auto v2 = v * v;
+  const auto v4 = v2 * v2;
+  const auto v6 = v2 * v4;
+  const auto v7 = v * v6;
+
+  return v7;
+}
+
+#elif defined __ARM_NEON && USE_NEON != 0
+
+// Uses NEON vector instrinsics for raising two elements ∈ Z_q to their 7-th
+// power, by using less multiplications, than one would do if done using
+// standard exponentiation routine.
+//
+// Adapted from
+// https://github.com/novifinancial/winterfell/blob/437dc08/math/src/field/f64/mod.rs#L74-L82
+static inline ff::ff_neon_t
+exp7(const ff::ff_neon_t v)
 {
   const auto v2 = v * v;
   const auto v4 = v2 * v2;
@@ -221,7 +249,7 @@ exp_acc(const ff::ff_t* const base,
 #if defined __GNUC__
 #pragma GCC unroll 3
 #elif defined __clang__
-#pragma unroll 3
+#pragma clang loop unroll(enable)
 #endif
     for (size_t j = 0; j < 3; j++) {
       const size_t off = j * 4;
@@ -236,7 +264,9 @@ exp_acc(const ff::ff_t* const base,
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
     for (size_t j = 0; j < STATE_WIDTH; j++) {
       res[j] = res[j] * res[j];
@@ -250,7 +280,7 @@ exp_acc(const ff::ff_t* const base,
 #if defined __GNUC__
 #pragma GCC unroll 3
 #elif defined __clang__
-#pragma unroll 3
+#pragma clang loop unroll(enable)
 #endif
   for (size_t i = 0; i < 3; i++) {
     const size_t off = i * 4;
@@ -266,7 +296,9 @@ exp_acc(const ff::ff_t* const base,
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     res[i] = res[i] * tail[i];
@@ -288,7 +320,7 @@ apply_sbox(ff::ff_t* const state)
 #if defined __GNUC__
 #pragma GCC unroll 3
 #elif defined __clang__
-#pragma unroll 3
+#pragma clang loop unroll(enable)
 #endif
   for (size_t i = 0; i < 3; i++) {
     const size_t off = i * 4;
@@ -298,12 +330,29 @@ apply_sbox(ff::ff_t* const state)
     t1.store(state + off);
   }
 
+#elif defined __ARM_NEON && USE_NEON != 0
+
+#if defined __GNUC__
+#pragma GCC unroll 6
+#elif defined __clang__
+#pragma unroll 6
+#endif
+  for (size_t i = 0; i < 6; i++) {
+    const size_t off = i * 2;
+
+    const ff::ff_neon_t t0{ state + off };
+    const auto t1 = exp7(t0);
+    t1.store(state + off);
+  }
+
 #else
 
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] = exp7(state[i]);
@@ -332,7 +381,7 @@ apply_inv_sbox(ff::ff_t* const state)
 #if defined __GNUC__
 #pragma GCC unroll 3
 #elif defined __clang__
-#pragma unroll 3
+#pragma clang loop unroll(enable)
 #endif
   for (size_t i = 0; i < 3; i++) {
     const size_t off = i * 4;
@@ -350,7 +399,9 @@ apply_inv_sbox(ff::ff_t* const state)
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     t1[i] = state[i] * state[i];
@@ -379,7 +430,7 @@ apply_inv_sbox(ff::ff_t* const state)
 #if defined __GNUC__
 #pragma GCC unroll 3
 #elif defined __clang__
-#pragma unroll 3
+#pragma clang loop unroll(enable)
 #endif
   for (size_t i = 0; i < 3; i++) {
     const size_t off = i * 4;
@@ -406,7 +457,9 @@ apply_inv_sbox(ff::ff_t* const state)
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     const auto a0 = t7[i] * t7[i];
@@ -439,7 +492,7 @@ add_rc0(ff::ff_t* const state, const size_t ridx)
 #if defined __GNUC__
 #pragma GCC unroll 3
 #elif defined __clang__
-#pragma unroll 3
+#pragma clang loop unroll(enable)
 #endif
   for (size_t i = 0; i < 3; i++) {
     const size_t off = i * 4;
@@ -450,12 +503,30 @@ add_rc0(ff::ff_t* const state, const size_t ridx)
     s2.store(state + off);
   }
 
+#elif defined __ARM_NEON && USE_NEON != 0
+
+#if defined __GNUC__
+#pragma GCC unroll 6
+#elif defined __clang__
+#pragma unroll 6
+#endif
+  for (size_t i = 0; i < 6; i++) {
+    const size_t off = i * 2;
+
+    const ff::ff_neon_t s0{ state + off };
+    const ff::ff_neon_t s1{ RC0 + rc_off + off };
+    const auto s2 = s0 + s1;
+    s2.store(state + off);
+  }
+
 #else
 
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] = state[i] + RC0[rc_off + i];
@@ -480,7 +551,7 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
 #if defined __GNUC__
 #pragma GCC unroll 3
 #elif defined __clang__
-#pragma unroll 3
+#pragma clang loop unroll(enable)
 #endif
   for (size_t i = 0; i < 3; i++) {
     const size_t off = i * 4;
@@ -491,12 +562,30 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
     s2.store(state + off);
   }
 
+#elif defined __ARM_NEON && USE_NEON != 0
+
+#if defined __GNUC__
+#pragma GCC unroll 6
+#elif defined __clang__
+#pragma unroll 6
+#endif
+  for (size_t i = 0; i < 6; i++) {
+    const size_t off = i * 2;
+
+    const ff::ff_neon_t s0{ state + off };
+    const ff::ff_neon_t s1{ RC1 + rc_off + off };
+    const auto s2 = s0 + s1;
+    s2.store(state + off);
+  }
+
 #else
 
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] = state[i] + RC1[rc_off + i];
@@ -547,6 +636,9 @@ apply_mds(ff::ff_t* const state)
 
 #if defined __AVX2__ && USE_AVX2 != 0
 
+#if defined __clang__
+#pragma clang loop unroll(enable)
+#endif
   for (size_t i = 0; i < 3; i++) {
     const size_t soff = i * 4;
 
@@ -633,13 +725,18 @@ apply_mds(ff::ff_t* const state)
 
 #else
 
+#if defined __clang__
+#pragma clang loop unroll(enable)
+#endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     const size_t off = i * STATE_WIDTH;
 
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
     for (size_t j = 0; j < STATE_WIDTH; j++) {
       tmp[i] = tmp[i] + state[j] * MDS[off + j];
