@@ -50,10 +50,10 @@ full_mul_u64x2(const uint64x2_t lhs, const uint64x2_t rhs)
   const auto rhs_hi_ = vreinterpretq_u32_u64(vshrq_n_u64(rhs, 32));
   const auto rhs_lo_ = vreinterpretq_u32_u64(vandq_u64(rhs, u32x2));
 
-  const auto lhs_hi = vtrn1_u32(vget_high_u32(lhs_hi_), vget_low_u32(lhs_hi_));
-  const auto lhs_lo = vtrn1_u32(vget_high_u32(lhs_lo_), vget_low_u32(lhs_lo_));
-  const auto rhs_hi = vtrn1_u32(vget_high_u32(rhs_hi_), vget_low_u32(rhs_hi_));
-  const auto rhs_lo = vtrn1_u32(vget_high_u32(rhs_lo_), vget_low_u32(rhs_lo_));
+  const auto lhs_hi = vtrn1_u32(vget_low_u32(lhs_hi_), vget_high_u32(lhs_hi_));
+  const auto lhs_lo = vtrn1_u32(vget_low_u32(lhs_lo_), vget_high_u32(lhs_lo_));
+  const auto rhs_hi = vtrn1_u32(vget_low_u32(rhs_hi_), vget_high_u32(rhs_hi_));
+  const auto rhs_lo = vtrn1_u32(vget_low_u32(rhs_lo_), vget_high_u32(rhs_lo_));
 
   const auto hi = vmull_u32(lhs_hi, rhs_hi);
   const auto mid0 = vmull_u32(lhs_hi, rhs_lo);
