@@ -121,6 +121,44 @@ struct ff_neon_t
     return ff_neon_t{ t5 };
   }
 
+  // Given two 128 -bit registers, each holding two prime field Z_q elements,
+  // this routine performs element wise multiplication over Z_q and returns
+  // result in canonical form i.e. each 64 -bit result limb must ∈ Z_q.
+  //
+  // This routine does what
+  // https://github.com/itzmeanjan/rescue-prime/blob/22b7aa5/include/ff.hpp#L102-L125
+  // does, only difference is that instead of working on single element at a
+  // time, it works on two of them.
+  inline ff_neon_t operator*(const ff_neon_t& rhs) const
+  {
+    const auto u32x2 = vdupq_n_u64(static_cast<uint64_t>(UINT32_MAX));
+    const auto u64x2 = vdupq_n_u64(UINT64_MAX);
+
+    const auto res = full_mul_u64x2(this->v, rhs.v);
+    const auto res_hi = res.first;
+    const auto res_lo = res.second;
+
+    const auto c = vandq_u64(res_hi, u32x2);
+    const auto d = vshrq_n_u64(res_hi, 32);
+
+    const auto t2 = vsubq_u64(res_lo, d);
+    const auto t3 = vcltq_u64(res_lo, d);
+    const auto t4 = vshrq_n_u64(t3, 32);
+    const auto t5 = vsubq_u64(t2, t4);
+
+    const auto t6 = vshlq_n_u64(c, 32);
+    const auto t7 = vsubq_u64(t6, c);
+    const auto t8 = vaddq_u64(t5, t7);
+
+    const auto t9 = vsubq_u64(u64x2, t7);
+    const auto t10 = vcgtq_u64(t5, t9);
+    const auto t11 = vshrq_n_u64(t10, 32);
+    const auto t12 = vaddq_u64(t8, t11);
+
+    const auto t13 = reduce(t12);
+    return ff_neon_t{ t13 };
+  }
+
   // Stores two prime field Z_q elements ( kept in a 128 -bit register )
   inline void store(ff::ff_t* const arr) const
   {
