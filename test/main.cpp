@@ -21,6 +21,7 @@ main()
 
   test_rphash::test_neon_mod_add();
   test_rphash::test_neon_full_mul();
+  test_rphash::test_neon_mod_mul();
   std::cout << "[test] NEON -based Rescue Prime field arithmetic\n";
 
 #endif
