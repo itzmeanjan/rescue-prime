@@ -7,7 +7,7 @@
 #pragma message("Using AVX2 for Rescue permutation")
 #include "ff_avx.hpp"
 
-#elif defined __ARM_NEON
+#elif defined __ARM_NEON && USE_NEON != 0
 
 #pragma message("Using NEON for Rescue permutation")
 #include "ff_neon.hpp"
@@ -188,7 +188,7 @@ exp7(const ff::ff_avx_t v)
   return v7;
 }
 
-#elif defined __ARM_NEON
+#elif defined __ARM_NEON && USE_NEON != 0
 
 // Uses NEON vector instrinsics for raising two elements ∈ Z_q to their 7-th
 // power, by using less multiplications, than one would do if done using
@@ -330,7 +330,7 @@ apply_sbox(ff::ff_t* const state)
     t1.store(state + off);
   }
 
-#elif defined __ARM_NEON
+#elif defined __ARM_NEON && USE_NEON != 0
 
 #if defined __GNUC__
 #pragma GCC unroll 6
@@ -503,7 +503,7 @@ add_rc0(ff::ff_t* const state, const size_t ridx)
     s2.store(state + off);
   }
 
-#elif defined __ARM_NEON
+#elif defined __ARM_NEON && USE_NEON != 0
 
 #if defined __GNUC__
 #pragma GCC unroll 6
@@ -562,7 +562,7 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
     s2.store(state + off);
   }
 
-#elif defined __ARM_NEON
+#elif defined __ARM_NEON && USE_NEON != 0
 
 #if defined __GNUC__
 #pragma GCC unroll 6

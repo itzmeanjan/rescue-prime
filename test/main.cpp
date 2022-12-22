@@ -17,7 +17,7 @@ main()
 
 #endif
 
-#if defined __ARM_NEON
+#if defined __ARM_NEON && USE_NEON != 0
 
   test_rphash::test_neon_mod_add();
   test_rphash::test_neon_full_mul();
