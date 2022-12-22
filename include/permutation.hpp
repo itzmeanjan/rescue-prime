@@ -326,6 +326,21 @@ apply_sbox(ff::ff_t* const state)
     t1.store(state + off);
   }
 
+#elif defined __ARM_NEON
+
+#if defined __GNUC__
+#pragma GCC unroll 6
+#elif defined __clang__
+#pragma unroll 6
+#endif
+  for (size_t i = 0; i < 6; i++) {
+    const size_t off = i * 2;
+
+    const ff::ff_neon_t t0{ state + off };
+    const auto t1 = exp7(t0);
+    t1.store(state + off);
+  }
+
 #else
 
 #if defined __GNUC__
