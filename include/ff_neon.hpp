@@ -26,6 +26,62 @@ reduce(const uint64x2_t a)
   return t2;
 }
 
+// Given two 128 -bit registers, each holding two 64 -bit unsigned integers,
+// this routine performs a full multiplication of each 64 -bit wide limb with
+// corresponding limb on other register, producing a 128 -bit result, which is
+// splitted into high 64 -bits and low 64 -bits, maintained on two different
+// resulting 128 -bit registers.
+//
+// Note, returned 128 -bit register pair holds
+//
+// - high 64 -bits in first register
+// - then low 64 -bits are kept on the second register
+//
+// This routine does exactly what
+// https://github.com/itzmeanjan/rescue-prime/blob/22b7aa5/include/ff.hpp#L15-L50
+// does, only difference is that it performs two of those operations at a time.
+static inline std::pair<uint64x2_t, uint64x2_t>
+full_mul_u64x2(const uint64x2_t lhs, const uint64x2_t rhs)
+{
+  const auto u32x2 = vdupq_n_u64(0xfffffffful);
+
+  const auto lhs_hi_ = vreinterpretq_u32_u64(vshrq_n_u64(lhs, 32));
+  const auto lhs_lo_ = vreinterpretq_u32_u64(vandq_u64(lhs, u32x2));
+  const auto rhs_hi_ = vreinterpretq_u32_u64(vshrq_n_u64(rhs, 32));
+  const auto rhs_lo_ = vreinterpretq_u32_u64(vandq_u64(rhs, u32x2));
+
+  const auto lhs_hi = vtrn1_u32(vget_high_u32(lhs_hi_), vget_low_u32(lhs_hi_));
+  const auto lhs_lo = vtrn1_u32(vget_high_u32(lhs_lo_), vget_low_u32(lhs_lo_));
+  const auto rhs_hi = vtrn1_u32(vget_high_u32(rhs_hi_), vget_low_u32(rhs_hi_));
+  const auto rhs_lo = vtrn1_u32(vget_high_u32(rhs_lo_), vget_low_u32(rhs_lo_));
+
+  const auto hi = vmull_u32(lhs_hi, rhs_hi);
+  const auto mid0 = vmull_u32(lhs_hi, rhs_lo);
+  const auto mid1 = vmull_u32(lhs_lo, rhs_hi);
+  const auto lo = vmull_u32(lhs_lo, rhs_lo);
+
+  const auto mid0_hi = vshrq_n_u64(mid0, 32);
+  const auto mid0_lo = vandq_u64(mid0, u32x2);
+  const auto mid1_hi = vshrq_n_u64(mid1, 32);
+  const auto mid1_lo = vandq_u64(mid1, u32x2);
+
+  const auto t0 = vshrq_n_u64(lo, 32);
+  const auto t1 = vaddq_u64(t0, mid0_lo);
+  const auto t2 = vaddq_u64(t1, mid1_lo);
+  const auto carry = vshrq_n_u64(t2, 32);
+
+  const auto t3 = vaddq_u64(hi, mid0_hi);
+  const auto t4 = vaddq_u64(t3, mid1_hi);
+  const auto res_hi = vaddq_u64(t4, carry);
+
+  const auto t5 = vshlq_n_u64(mid0_lo, 32);
+  const auto t6 = vshlq_n_u64(mid1_lo, 32);
+  const auto t7 = vaddq_u64(lo, t5);
+  const auto res_lo = vaddq_u64(t7, t6);
+
+  return std::make_pair(res_hi, res_lo);
+}
+
 // Two elements of prime field Z_q | q = 2^64 - 2^32 + 1, stored in a 128 -bit
 // Neon register, defining modular {addition, multiplication} over it.
 struct ff_neon_t
