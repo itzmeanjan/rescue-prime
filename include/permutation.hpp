@@ -1,12 +1,21 @@
 #pragma once
 
 #include <cstring>
-#if defined __AVX2__ && USE_AVX2 != 0
-#pragma message("Using AVX2 for Rescue permutation")
 
+#if defined __AVX2__ && USE_AVX2 != 0
+
+#pragma message("Using AVX2 for Rescue permutation")
 #include "ff_avx.hpp"
+
+#elif defined __ARM_NEON
+
+#pragma message("Using NEON for Rescue permutation")
+#include "ff_neon.hpp"
+
 #else
+
 #include "ff.hpp"
+
 #endif
 
 // Rescue Permutation over prime field Z_q, q = 2^64 - 2^32 + 1
@@ -162,14 +171,33 @@ alignas(32) constexpr ff::ff_t RC1[ROUNDS * STATE_WIDTH]{
 
 #if defined __AVX2__ && USE_AVX2 != 0
 
-// Uses vector instrinsics for raising four elements ∈ Z_q to their 7-th power,
-// by using less multiplications, than one would do if done using standard
-// exponentiation routine.
+// Uses AVX2 vector instrinsics for raising four elements ∈ Z_q to their 7-th
+// power, by using less multiplications, than one would do if done using
+// standard exponentiation routine.
 //
 // Adapted from
 // https://github.com/novifinancial/winterfell/blob/437dc08/math/src/field/f64/mod.rs#L74-L82
 static inline ff::ff_avx_t
 exp7(const ff::ff_avx_t v)
+{
+  const auto v2 = v * v;
+  const auto v4 = v2 * v2;
+  const auto v6 = v2 * v4;
+  const auto v7 = v * v6;
+
+  return v7;
+}
+
+#elif defined __ARM_NEON
+
+// Uses NEON vector instrinsics for raising two elements ∈ Z_q to their 7-th
+// power, by using less multiplications, than one would do if done using
+// standard exponentiation routine.
+//
+// Adapted from
+// https://github.com/novifinancial/winterfell/blob/437dc08/math/src/field/f64/mod.rs#L74-L82
+static inline ff::ff_neon_t
+exp7(const ff::ff_neon_t v)
 {
   const auto v2 = v * v;
   const auto v4 = v2 * v2;
