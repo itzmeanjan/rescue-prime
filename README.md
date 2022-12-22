@@ -81,7 +81,17 @@ If your target CPU has AVX2 features, try testing that implementation by issuing
 AVX2=1 make # tests AVX2 implementation
 
 [test] Rescue Prime field arithmetic
-[test] Vectorized Rescue Prime field arithmetic
+[test] AVX2 -based Rescue Prime field arithmetic
+[test] Rescue Permutation
+```
+
+Or if your target CPU has NEON features, try testing that implementation by issuing
+
+```bash
+NEON=1 make # tests NEON implementation
+
+[test] Rescue Prime field arithmetic
+[test] NEON -based Rescue Prime field arithmetic
 [test] Rescue Permutation
 ```
 
@@ -102,6 +112,12 @@ If your target CPU has AVX2 features, you may want to benchmark that implementat
 
 ```bash
 AVX2=1 make benchmark # benchmarks AVX2 implementation
+```
+
+Or if your target CPU has NEON features, you may want to benchmark that implementation by issuing
+
+```bash
+NEON=1 make benchmark # benchmarks NEON implementation
 ```
 
 > **Note**
