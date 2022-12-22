@@ -264,7 +264,9 @@ exp_acc(const ff::ff_t* const base,
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
     for (size_t j = 0; j < STATE_WIDTH; j++) {
       res[j] = res[j] * res[j];
@@ -294,7 +296,9 @@ exp_acc(const ff::ff_t* const base,
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     res[i] = res[i] * tail[i];
@@ -346,7 +350,9 @@ apply_sbox(ff::ff_t* const state)
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] = exp7(state[i]);
@@ -393,7 +399,9 @@ apply_inv_sbox(ff::ff_t* const state)
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     t1[i] = state[i] * state[i];
@@ -449,7 +457,9 @@ apply_inv_sbox(ff::ff_t* const state)
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     const auto a0 = t7[i] * t7[i];
@@ -498,7 +508,9 @@ add_rc0(ff::ff_t* const state, const size_t ridx)
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] = state[i] + RC0[rc_off + i];
@@ -539,7 +551,9 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     state[i] = state[i] + RC1[rc_off + i];
@@ -676,13 +690,18 @@ apply_mds(ff::ff_t* const state)
 
 #else
 
+#if defined __clang__
+#pragma clang loop unroll(enable)
+#endif
   for (size_t i = 0; i < STATE_WIDTH; i++) {
     const size_t off = i * STATE_WIDTH;
 
 #if defined __GNUC__
 #pragma GCC unroll 12
 #elif defined __clang__
-#pragma unroll 12
+#pragma clang loop unroll(enable)
+#pragma clang loop vectorize(enable)
+#pragma clang loop interleave(enable)
 #endif
     for (size_t j = 0; j < STATE_WIDTH; j++) {
       tmp[i] = tmp[i] + state[j] * MDS[off + j];
