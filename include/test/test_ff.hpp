@@ -300,35 +300,9 @@ test_neon_full_mul()
   }
 
   // finally ensure both implementations produce same result.
-  //
-  // Following assertions are written that way because of how NEON intrinsics
-  // load data from memory place them on register. For example
-  //
-  // Assume we're working with following array
-  //
-  // const uint64_t data[2]{0, 1};
-  //
-  // That array can be used for constructing a 128 -bit NEON register with two
-  // 64 -bit limbs, by issuing
-  //
-  // const uint64x2_t reg = vld1q_u64(data);
-  //
-  // If one inspects how that data is laid on 128 -bit register, it'll look like
-  //
-  // |<------ data[1] ------->|<----- data[0] ----->|
-  // |<--- high 64 -bits --->|<--- low 64 -bits --->|
-  // |<--------- 128 -bit NEON register ----------->|
-  //
-  // Which reverses order of array elements on 128 -bit register ( i.e. reg ),
-  // so result computed by `ff::full_mul_u64x2` routine is also flipped.
-  for (size_t i = 0; i < rounds; i++) {
-    const size_t off = i * 2;
-
-    assert(computed_res_hi[off + 0] == expected_res_hi[off + 1]);
-    assert(computed_res_hi[off + 1] == expected_res_hi[off + 0]);
-
-    assert(computed_res_lo[off + 0] == expected_res_lo[off + 1]);
-    assert(computed_res_lo[off + 1] == expected_res_lo[off + 0]);
+  for (size_t i = 0; i < 2 * rounds; i++) {
+    assert(computed_res_hi[i] == expected_res_hi[i]);
+    assert(computed_res_lo[i] == expected_res_lo[i]);
   }
 }
 
@@ -369,11 +343,8 @@ test_neon_mod_mul()
   }
 
   // finally ensure both implementations produce same result.
-  for (size_t i = 0; i < rounds; i++) {
-    const size_t off = i * 2;
-
-    assert(computed_res[off + 0] == expected_res[off + 1]);
-    assert(computed_res[off + 1] == expected_res[off + 0]);
+  for (size_t i = 0; i < 2 * rounds; i++) {
+    assert(computed_res[i] == expected_res[i]);
   }
 }
 
