@@ -503,6 +503,22 @@ add_rc0(ff::ff_t* const state, const size_t ridx)
     s2.store(state + off);
   }
 
+#elif defined __ARM_NEON
+
+#if defined __GNUC__
+#pragma GCC unroll 6
+#elif defined __clang__
+#pragma unroll 6
+#endif
+  for (size_t i = 0; i < 6; i++) {
+    const size_t off = i * 2;
+
+    const ff::ff_neon_t s0{ state + off };
+    const ff::ff_neon_t s1{ RC0 + rc_off + off };
+    const auto s2 = s0 + s1;
+    s2.store(state + off);
+  }
+
 #else
 
 #if defined __GNUC__
@@ -542,6 +558,22 @@ add_rc1(ff::ff_t* const state, const size_t ridx)
 
     const ff::ff_avx_t s0{ state + off };
     const ff::ff_avx_t s1{ RC1 + rc_off + off };
+    const auto s2 = s0 + s1;
+    s2.store(state + off);
+  }
+
+#elif defined __ARM_NEON
+
+#if defined __GNUC__
+#pragma GCC unroll 6
+#elif defined __clang__
+#pragma unroll 6
+#endif
+  for (size_t i = 0; i < 6; i++) {
+    const size_t off = i * 2;
+
+    const ff::ff_neon_t s0{ state + off };
+    const ff::ff_neon_t s1{ RC1 + rc_off + off };
     const auto s2 = s0 + s1;
     s2.store(state + off);
   }
