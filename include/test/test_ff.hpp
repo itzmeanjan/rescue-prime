@@ -1,6 +1,7 @@
 #pragma once
 #include "ff.hpp"
 #include "ff_avx.hpp"
+#include "ff_avx512.hpp"
 #include "ff_neon.hpp"
 #include <cassert>
 
