@@ -53,7 +53,7 @@ struct ff_avx512_t
 
     const auto t0 = _mm512_add_epi64(this->v, rhs.v);
     const auto t1 = _mm512_sub_epi64(u64x8, rhs.v);
-    const auto t2 = _mm512_cmpgt_epi64_mask(this->v, t1);
+    const auto t2 = _mm512_cmpgt_epu64_mask(this->v, t1);
     const auto t3 = _mm512_maskz_set1_epi64(t2, UINT32_MAX);
     const auto t4 = _mm512_add_epi64(t0, t3);
 
