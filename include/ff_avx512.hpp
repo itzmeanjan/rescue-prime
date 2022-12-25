@@ -7,6 +7,21 @@
 // Prime Field ( i.e. Z_q ) Arithmetic | q = 2^64 - 2^32 + 1
 namespace ff {
 
+// Given a 512 -bit register, holding eight 64 -bit unsigned integers, this
+// routine converts each of those eight limbs to their canonical representation
+// in prime field Z_q i.e. returned register holds eight elements ∈ Z_q.
+static inline __m512i
+reduce(const __m512i a)
+{
+  const auto q = _mm512_set1_epi64(ff::Q);
+
+  const auto t0 = _mm512_cmpgt_epu64_mask(a, q);
+  const auto t1 = _mm512_maskz_set1_epi64(t0, ff::Q);
+  const auto t2 = _mm512_sub_epi64(a, t1);
+
+  return t2;
+}
+
 // Eight elements of the prime field Z_q | q = 2^64 - 2^32 + 1, stored in a 512
 // -bit AVX512 register, loaded *only* from 64 -bytes aligned memory address (
 // see constructor ), defining modular {addition, multiplication} over it, used
