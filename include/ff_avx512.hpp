@@ -39,6 +39,28 @@ struct ff_avx512_t
   // result in a segmentation fault.
   inline ff_avx512_t(const ff::ff_t* const arr) { v = _mm512_load_epi64(arr); }
 
+  // Given two 512 -bit registers, each holding eight prime field Z_q elements,
+  // this routine performs element wise addition over Z_q and returns result in
+  // canonical form i.e. each 64 -bit result limb must ∈ Z_q.
+  //
+  // This routine does what
+  // https://github.com/itzmeanjan/rescue-prime/blob/22b7aa5/include/ff.hpp#L73-L84
+  // does, only difference is that instead of working on single element at a
+  // time, it works on eight of them.
+  inline ff_avx512_t operator+(const ff_avx512_t& rhs) const
+  {
+    const auto u64x8 = _mm512_set1_epi64(UINT64_MAX);
+
+    const auto t0 = _mm512_add_epi64(this->v, rhs.v);
+    const auto t1 = _mm512_sub_epi64(u64x8, rhs.v);
+    const auto t2 = _mm512_cmpgt_epi64_mask(this->v, t1);
+    const auto t3 = _mm512_maskz_set1_epi64(t2, UINT32_MAX);
+    const auto t4 = _mm512_add_epi64(t0, t3);
+
+    const auto t5 = reduce(t4);
+    return ff_avx512_t{ t5 };
+  }
+
   // Stores eight prime field Z_q elements ( kept in a 512 -bit register ) into
   // 64 -bytes aligned memory s.t. starting memory address is provided.
   //
