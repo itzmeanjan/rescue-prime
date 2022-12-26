@@ -42,8 +42,8 @@ full_mul_u64x8(const __m512i lhs, const __m512i rhs)
 {
   const auto u32x8 = _mm512_set1_epi64(UINT32_MAX);
 
-  const auto lhs_hi = _mm512_slli_epi64(lhs, 32);
-  const auto rhs_hi = _mm512_slli_epi64(rhs, 32);
+  const auto lhs_hi = _mm512_srli_epi64(lhs, 32);
+  const auto rhs_hi = _mm512_srli_epi64(rhs, 32);
 
   const auto hi = _mm512_mul_epu32(lhs_hi, rhs_hi);
   const auto mid0 = _mm512_mul_epu32(lhs_hi, rhs);
