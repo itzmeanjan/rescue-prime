@@ -111,6 +111,42 @@ struct ff_avx512_t
     return ff_avx512_t{ t5 };
   }
 
+  // Given two 512 -bit registers, each holding 8 prime field Z_q elements, this
+  // routine performs element wise multiplication over Z_q and returns result in
+  // canonical form i.e. each 64 -bit result limb must ∈ Z_q.
+  //
+  // This routine does what
+  // https://github.com/itzmeanjan/rescue-prime/blob/22b7aa5/include/ff.hpp#L102-L125
+  // does, only difference is that instead of working on single element at a
+  // time, it works on eight of them.
+  inline ff_avx512_t operator*(const ff_avx512_t& rhs) const
+  {
+    const auto u32x8 = _mm512_set1_epi64(UINT32_MAX);
+    const auto u64x8 = _mm512_set1_epi64(UINT64_MAX);
+
+    const auto [res_hi, res_lo] = full_mul_u64x8(this->v, rhs.v);
+
+    const auto c = _mm512_and_si512(res_hi, u32x8);
+    const auto d = _mm512_srli_epi64(res_hi, 32);
+
+    const auto t2 = _mm512_sub_epi64(res_lo, d);
+    const auto t3 = _mm512_cmpgt_epi64_mask(d, res_lo);
+    const auto t4 = _mm512_maskz_set1_epi64(t3, UINT32_MAX);
+    const auto t5 = _mm512_sub_epi64(t2, t4);
+
+    const auto t6 = _mm512_slli_epi64(c, 32);
+    const auto t7 = _mm512_sub_epi64(t6, c);
+    const auto t8 = _mm512_add_epi64(t5, t7);
+
+    const auto t9 = _mm512_sub_epi64(u64x8, t7);
+    const auto t10 = _mm512_cmpgt_epi64_mask(t5, t9);
+    const auto t11 = _mm512_maskz_set1_epi64(t10, UINT32_MAX);
+    const auto t12 = _mm512_add_epi64(t8, t11);
+
+    const auto t13 = reduce(t12);
+    return ff_avx512_t{ t13 };
+  }
+
   // Stores eight prime field Z_q elements ( kept in a 512 -bit register ) into
   // 64 -bytes aligned memory s.t. starting memory address is provided.
   //
