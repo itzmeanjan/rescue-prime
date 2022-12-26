@@ -450,6 +450,48 @@ test_avx512_full_mul()
   }
 }
 
+// Test that vectorized ( using AVX512 ) modulo multiplication over Z_q is
+// implemented correctly by checking computed values against scalar
+// implementation.
+template<const size_t rounds = 256ul>
+void
+test_avx512_mod_mul()
+{
+  static_assert(rounds > 0, "Round must not be = 0 !");
+
+  alignas(64) ff::ff_t arr0[8 * rounds];
+  alignas(64) ff::ff_t arr1[8 * rounds];
+  alignas(64) ff::ff_t computed_res[8 * rounds];
+  alignas(64) ff::ff_t expected_res[8 * rounds];
+
+  // generate some random Z_q elements
+  for (size_t i = 0; i < 8 * rounds; i++) {
+    arr0[i] = ff::ff_t::random();
+    arr1[i] = ff::ff_t::random();
+  }
+
+  // compute modulo multiplication over Z_q, using scalar implementation
+  for (size_t i = 0; i < 8 * rounds; i++) {
+    expected_res[i] = arr0[i] * arr1[i];
+  }
+
+  // compute modulo multiplication over Z_q, using AVX512 implementation
+  for (size_t i = 0; i < rounds; i++) {
+    const size_t off = i * 8;
+
+    const ff::ff_avx512_t a{ arr0 + off };
+    const ff::ff_avx512_t b{ arr1 + off };
+
+    const ff::ff_avx512_t c = a * b;
+    c.store(computed_res + off);
+  }
+
+  // finally ensure both implementations produce same result.
+  for (size_t i = 0; i < 8 * rounds; i++) {
+    assert(computed_res[i] == expected_res[i]);
+  }
+}
+
 #endif
 
 }
