@@ -22,6 +22,56 @@ reduce(const __m512i a)
   return t2;
 }
 
+// Given two 512 -bit registers, each holding eight 64 -bit unsigned integers,
+// this routine performs a full multiplication of each 64 -bit wide limb with
+// corresponding limb on other register, producing a 128 -bit result, which is
+// splitted into high 64 -bits and low 64 -bits, maintained on two different
+// resulting registers.
+//
+// Note, returned 512 -bit register pair holds
+//
+// - high 64 -bits in first register
+// - then low 64 -bits are kept on second register
+//
+// This routine does exactly what
+// https://github.com/itzmeanjan/rescue-prime/blob/22b7aa5/include/ff.hpp#L15-L50
+// does, only difference is that it performs eight of those operations at a
+// time.
+static inline std::pair<__m512i, __m512i>
+full_mul_u64x8(const __m512i lhs, const __m512i rhs)
+{
+  const auto u32x8 = _mm512_set1_epi64(UINT32_MAX);
+
+  const auto lhs_hi = _mm512_slli_epi64(lhs, 32);
+  const auto rhs_hi = _mm512_slli_epi64(rhs, 32);
+
+  const auto hi = _mm512_mul_epu32(lhs_hi, rhs_hi);
+  const auto mid0 = _mm512_mul_epu32(lhs_hi, rhs);
+  const auto mid1 = _mm512_mul_epu32(lhs, rhs_hi);
+  const auto lo = _mm512_mul_epu32(lhs, rhs);
+
+  const auto mid0_hi = _mm512_srli_epi64(mid0, 32);
+  const auto mid0_lo = _mm512_and_si512(mid0, u32x8);
+  const auto mid1_hi = _mm512_srli_epi64(mid1, 32);
+  const auto mid1_lo = _mm512_and_si512(mid1, u32x8);
+
+  const auto t0 = _mm512_srli_epi64(lo, 32);
+  const auto t1 = _mm512_add_epi64(t0, mid0_lo);
+  const auto t2 = _mm512_add_epi64(t1, mid1_lo);
+  const auto carry = _mm512_srli_epi64(t2, 32);
+
+  const auto t3 = _mm512_add_epi64(hi, mid0_hi);
+  const auto t4 = _mm512_add_epi64(t3, mid1_hi);
+  const auto res_hi = _mm512_add_epi64(t4, carry);
+
+  const auto t5 = _mm512_slli_epi64(mid0_lo, 32);
+  const auto t6 = _mm512_slli_epi64(mid1_lo, 32);
+  const auto t7 = _mm512_add_epi64(lo, t5);
+  const auto res_lo = _mm512_add_epi64(t7, t6);
+
+  return std::make_pair(res_hi, res_lo);
+}
+
 // Eight elements of the prime field Z_q | q = 2^64 - 2^32 + 1, stored in a 512
 // -bit AVX512 register, loaded *only* from 64 -bytes aligned memory address (
 // see constructor ), defining modular {addition, multiplication} over it, used
