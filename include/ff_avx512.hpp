@@ -130,7 +130,7 @@ struct ff_avx512_t
     const auto d = _mm512_srli_epi64(res_hi, 32);
 
     const auto t2 = _mm512_sub_epi64(res_lo, d);
-    const auto t3 = _mm512_cmpgt_epi64_mask(d, res_lo);
+    const auto t3 = _mm512_cmpgt_epu64_mask(d, res_lo);
     const auto t4 = _mm512_maskz_set1_epi64(t3, UINT32_MAX);
     const auto t5 = _mm512_sub_epi64(t2, t4);
 
@@ -139,7 +139,7 @@ struct ff_avx512_t
     const auto t8 = _mm512_add_epi64(t5, t7);
 
     const auto t9 = _mm512_sub_epi64(u64x8, t7);
-    const auto t10 = _mm512_cmpgt_epi64_mask(t5, t9);
+    const auto t10 = _mm512_cmpgt_epu64_mask(t5, t9);
     const auto t11 = _mm512_maskz_set1_epi64(t10, UINT32_MAX);
     const auto t12 = _mm512_add_epi64(t8, t11);
 
