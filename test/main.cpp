@@ -20,6 +20,7 @@ main()
 #if defined __AVX512F__
 
   test_rphash::test_avx512_mod_add();
+  test_rphash::test_avx512_full_mul();
   std::cout << "[test] AVX512 -based Rescue Prime field arithmetic\n";
 
 #endif
