@@ -190,7 +190,29 @@ alignas(32)
     12717309295554119359ul, 4130723396860574906ul,  7706153020203677238ul,
   };
 
-#if defined __AVX2__ && USE_AVX2 != 0
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+
+// Uses AVX512/ AVX2 vector instrinsics for raising eight/ four elements ∈ Z_q
+// to their 7-th power, by using less multiplications, than one would do if done
+// using standard exponentiation routine.
+//
+// Adapted from
+// https://github.com/novifinancial/winterfell/blob/437dc08/math/src/field/f64/mod.rs#L74-L82
+//
+// T ∈ {ff::ff_avx512_t, ff::ff_avx_t}
+template<typename T>
+static inline T
+exp7(const T v)
+{
+  const auto v2 = v * v;
+  const auto v4 = v2 * v2;
+  const auto v6 = v2 * v4;
+  const auto v7 = v * v6;
+
+  return v7;
+}
+
+#elif defined __AVX2__ && USE_AVX2 != 0
 
 // Uses AVX2 vector instrinsics for raising four elements ∈ Z_q to their 7-th
 // power, by using less multiplications, than one would do if done using
@@ -331,12 +353,20 @@ exp_acc(const ff::ff_t* const base,
 // Applies substitution box on Rescue permutation state, by raising each element
 // to its 7-th power.
 //
-// Starting address of the Rescue permutation state must be aligned to 32 -bytes
+// Starting address of the Rescue permutation state must be aligned to 32 ( in
+// case when AVX2 is used ) / 64 ( when AVX512 intrinsics are in use ) -bytes
 // boundary, otherwise program will panic !
 static inline void
 apply_sbox(ff::ff_t* const state)
 {
-#if defined __AVX2__ && USE_AVX2 != 0
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+
+  const ff::ff_avx512_t t0{ state };
+  exp7(t0).store(state);
+  const ff::ff_avx_t t1{ state + 8 };
+  exp7(t1).store(state + 8);
+
+#elif defined __AVX2__ && USE_AVX2 != 0
 
 #if defined __GNUC__
 #pragma GCC unroll 3
