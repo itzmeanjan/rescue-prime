@@ -275,8 +275,9 @@ exp7(const ff::ff_t v)
 // to perform cheaper exponentiation by a constant exponent, using lesser
 // multiplications.
 //
-// Starting address of `base`, `tail` & `res` must be aligned to 32 -bytes
-// boundary, otherwise program will panic !
+// Starting address of `base`, `tail` & `res` must be aligned to 32 ( when using
+// AVX2 ) / 64 ( when using AVX512 ) -bytes boundary, otherwise program will
+// panic !
 template<const size_t m>
 static inline void
 exp_acc(const ff::ff_t* const base,
@@ -287,7 +288,17 @@ exp_acc(const ff::ff_t* const base,
 
   for (size_t i = 0; i < m; i++) {
 
-#if defined __AVX2__ && USE_AVX2 != 0
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+
+    const ff::ff_avx512_t t0{ res };
+    const auto t1 = t0 * t0;
+    t1.store(res);
+
+    const ff::ff_avx_t t2{ res + 8 };
+    const auto t3 = t2 * t2;
+    t3.store(res + 8);
+
+#elif defined __AVX2__ && USE_AVX2 != 0
 
 #if defined __GNUC__
 #pragma GCC unroll 3
@@ -318,7 +329,19 @@ exp_acc(const ff::ff_t* const base,
 #endif
   }
 
-#if defined __AVX2__ && USE_AVX2 != 0
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+
+  const ff::ff_avx512_t t0{ res };
+  const ff::ff_avx512_t t1{ tail };
+  const auto t2 = t0 * t1;
+  t2.store(res);
+
+  const ff::ff_avx_t t3{ res + 8 };
+  const ff::ff_avx_t t4{ tail + 8 };
+  const auto t5 = t3 * t4;
+  t5.store(res + 8);
+
+#elif defined __AVX2__ && USE_AVX2 != 0
 
 #if defined __GNUC__
 #pragma GCC unroll 3
@@ -424,10 +447,33 @@ apply_sbox(ff::ff_t* const state)
 static inline void
 apply_inv_sbox(ff::ff_t* const state)
 {
-  alignas(32) ff::ff_t t1[STATE_WIDTH];
-  alignas(32) ff::ff_t t2[STATE_WIDTH];
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+  alignas(64)
+#elif defined __AVX2__ && USE_AVX2 != 0
+  alignas(32)
+#endif
+    ff::ff_t t1[STATE_WIDTH];
 
-#if defined __AVX2__ && USE_AVX2 != 0
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+  alignas(64)
+#elif defined __AVX2__ && USE_AVX2 != 0
+  alignas(32)
+#endif
+    ff::ff_t t2[STATE_WIDTH];
+
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+
+  const ff::ff_avx512_t s0{ state };
+  const auto s1 = s0 * s0;
+  const auto s2 = s1 * s1;
+  s2.store(state);
+
+  const ff::ff_avx_t s3{ state + 8 };
+  const auto s4 = s3 * s3;
+  const auto s5 = s4 * s4;
+  s5.store(state + 8);
+
+#elif defined __AVX2__ && USE_AVX2 != 0
 
 #if defined __GNUC__
 #pragma GCC unroll 3
@@ -461,22 +507,84 @@ apply_inv_sbox(ff::ff_t* const state)
 
 #endif
 
-  alignas(32) ff::ff_t t3[STATE_WIDTH];
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+  alignas(64)
+#elif defined __AVX2__ && USE_AVX2 != 0
+  alignas(32)
+#endif
+    ff::ff_t t3[STATE_WIDTH];
   exp_acc<3>(t2, t2, t3);
 
-  alignas(32) ff::ff_t t4[STATE_WIDTH];
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+  alignas(64)
+#elif defined __AVX2__ && USE_AVX2 != 0
+  alignas(32)
+#endif
+    ff::ff_t t4[STATE_WIDTH];
   exp_acc<6>(t3, t3, t4);
 
-  alignas(32) ff::ff_t t5[STATE_WIDTH];
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+  alignas(64)
+#elif defined __AVX2__ && USE_AVX2 != 0
+  alignas(32)
+#endif
+    ff::ff_t t5[STATE_WIDTH];
   exp_acc<12>(t4, t4, t5);
 
-  alignas(32) ff::ff_t t6[STATE_WIDTH];
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+  alignas(64)
+#elif defined __AVX2__ && USE_AVX2 != 0
+  alignas(32)
+#endif
+    ff::ff_t t6[STATE_WIDTH];
   exp_acc<6>(t5, t3, t6);
 
-  alignas(32) ff::ff_t t7[STATE_WIDTH];
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+  alignas(64)
+#elif defined __AVX2__ && USE_AVX2 != 0
+  alignas(32)
+#endif
+    ff::ff_t t7[STATE_WIDTH];
   exp_acc<31>(t6, t6, t7);
 
-#if defined __AVX2__ && USE_AVX2 != 0
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+
+  {
+    const ff::ff_avx512_t a0{ t7 };
+    const auto a1 = a0 * a0;
+    const ff::ff_avx512_t a2{ t6 };
+    const auto a3 = a1 * a2;
+    const auto a4 = a3 * a3;
+    const auto a5 = a4 * a4;
+
+    const ff::ff_avx512_t b0{ t1 };
+    const ff::ff_avx512_t b1{ t2 };
+    const auto b2 = b0 * b1;
+    const ff::ff_avx512_t b3{ state };
+    const auto b4 = b2 * b3;
+
+    const auto b5 = a5 * b4;
+    b5.store(state);
+  }
+  {
+    const ff::ff_avx_t a0{ t7 + 8 };
+    const auto a1 = a0 * a0;
+    const ff::ff_avx_t a2{ t6 + 8 };
+    const auto a3 = a1 * a2;
+    const auto a4 = a3 * a3;
+    const auto a5 = a4 * a4;
+
+    const ff::ff_avx_t b0{ t1 + 8 };
+    const ff::ff_avx_t b1{ t2 + 8 };
+    const auto b2 = b0 * b1;
+    const ff::ff_avx_t b3{ state + 8 };
+    const auto b4 = b2 * b3;
+
+    const auto b5 = a5 * b4;
+    b5.store(state + 8);
+  }
+
+#elif defined __AVX2__ && USE_AVX2 != 0
 
 #if defined __GNUC__
 #pragma GCC unroll 3
