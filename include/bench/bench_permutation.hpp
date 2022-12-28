@@ -9,7 +9,12 @@ namespace bench_rphash {
 inline void
 permutation(benchmark::State& state)
 {
-  alignas(32) ff::ff_t st[rescue::STATE_WIDTH];
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+  alignas(64)
+#elif defined __AVX2__ && USE_AVX2 != 0
+  alignas(32)
+#endif
+    ff::ff_t st[rescue::STATE_WIDTH];
 
   std::vector<uint64_t> durations;
 

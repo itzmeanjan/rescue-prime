@@ -15,7 +15,12 @@ hash(const ff::ff_t* const __restrict in, // input elements ∈ Z_q
      ff::ff_t* const __restrict out // 4 output elements ∈ Z_q
 )
 {
-  alignas(32) ff::ff_t state[rescue::STATE_WIDTH]{};
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+  alignas(64)
+#elif defined __AVX2__ && USE_AVX2 != 0
+  alignas(32)
+#endif
+    ff::ff_t state[rescue::STATE_WIDTH]{};
   state[rescue::CAPACITY_BEGINS] = ff::ff_t{ ilen };
 
   const size_t blk_cnt = ilen >> 3;
