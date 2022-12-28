@@ -466,12 +466,14 @@ apply_inv_sbox(ff::ff_t* const state)
   const ff::ff_avx512_t s0{ state };
   const auto s1 = s0 * s0;
   const auto s2 = s1 * s1;
-  s2.store(state);
+  s1.store(t1);
+  s2.store(t2);
 
   const ff::ff_avx_t s3{ state + 8 };
   const auto s4 = s3 * s3;
   const auto s5 = s4 * s4;
-  s5.store(state + 8);
+  s4.store(t1 + 8);
+  s5.store(t2 + 8);
 
 #elif defined __AVX2__ && USE_AVX2 != 0
 
