@@ -30,7 +30,12 @@ test_permutation()
     4275355080008025761ul,  7676681476902901785ul, 3460534574143792217ul,
     11912731278641497187ul, 8104899243369883110ul, 674509706691634438ul,
   };
-  alignas(32) ff::ff_t state[]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+#if defined __AVX512F__ && defined __AVX2__ && USE_AVX512 != 0
+  alignas(64)
+#elif defined __AVX2__ && USE_AVX2 != 0
+  alignas(32)
+#endif
+    ff::ff_t state[]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
 
   rescue::permute(state);
 
